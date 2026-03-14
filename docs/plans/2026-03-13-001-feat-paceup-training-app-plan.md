@@ -352,32 +352,32 @@ erDiagram
 #### Phase 4: PWA + Polish
 
 **4.1 PWA Configuration**
-- [ ] `vite-plugin-pwa` setup with Workbox
-- [ ] Web app manifest: name, icons, theme color, display: standalone
-- [ ] Service worker: cache app shell (HTML, JS, CSS, fonts) for fast load
-- [ ] App shell only for V1 offline — no data caching (see brainstorm: keep it simple)
-- [ ] Offline fallback page: "You're offline. Connect to the internet to use PaceUp."
-- [ ] Install prompt: rely on browser's native install prompt, no custom prompt in V1
+- [x] `vite-plugin-pwa` setup with Workbox
+- [x] Web app manifest: name, icons, theme color, display: standalone
+- [x] Service worker: cache app shell (HTML, JS, CSS, fonts) for fast load
+- [x] App shell only for V1 offline — no data caching (see brainstorm: keep it simple)
+- [x] Offline fallback page: "You're offline. Connect to the internet to use PaceUp."
+- [x] Install prompt: rely on browser's native install prompt, no custom prompt in V1
 
 **4.2 Onboarding Flow**
-- [ ] Post-login welcome screen: "Welcome to PaceUp, [name]!"
+- [x] Post-login welcome screen: "Welcome to PaceUp, [name]!"
 - [ ] Step 1: Backfill status indicator — "Importing your Strava activities... (X of ~Y imported)"
 - [ ] Step 2: Join or create a group (with option to skip)
 - [ ] Step 3: Create your first weekly plan (with option to skip)
 - [ ] Step 4: Land on dashboard
 
 **4.3 Empty States**
-- [ ] Training Planner (no plan): "No plan this week — create one?" with CTA button
-- [ ] Activity list (backfill in progress): skeleton cards + "Importing from Strava..." message
-- [ ] Activity list (no activities): "No activities yet. Complete a workout on Strava and it'll appear here."
-- [ ] Feed (no groups): "Join a group to see your friends' activities" + join/create group CTA
-- [ ] Group view (no groups): "Create or join a group to get started" + CTAs
-- [ ] Group training view (no plans): "No plans this week. Assign plans to your athletes to get started."
-- [ ] Notifications (empty): "No notifications yet"
+- [x] Training Planner (no plan): "No plan this week — create one?" with CTA button
+- [x] Activity list (backfill in progress): skeleton cards + "Importing from Strava..." message
+- [x] Activity list (no activities): "No activities yet. Complete a workout on Strava and it'll appear here."
+- [x] Feed (no groups): "Join a group to see your friends' activities" + join/create group CTA
+- [x] Group view (no groups): "Create or join a group to get started" + CTAs
+- [x] Group training view (no plans): "No plans this week. Assign plans to your athletes to get started."
+- [x] Notifications (empty): "No notifications yet"
 
 **4.4 Loading + Error States**
-- [ ] Skeleton loaders for all data-dependent views
-- [ ] Activity detail: progressive loading (summary first, then streams/map)
+- [x] Skeleton loaders for all data-dependent views
+- [x] Activity detail: progressive loading (summary first, then streams/map)
 - [ ] API error: toast notification with retry button
 - [ ] Strava sync error: banner "Having trouble syncing with Strava. We'll retry automatically."
 - [ ] Rate limit banner: "Strava sync paused temporarily. Your data will update shortly."
