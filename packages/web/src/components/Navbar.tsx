@@ -1,4 +1,5 @@
 import { useAuth } from '../lib/auth';
+import { NotificationBell } from './NotificationBell';
 
 export function Navbar() {
   const { user, logout } = useAuth();
@@ -22,12 +23,19 @@ export function Navbar() {
             <a href="/activities" className="text-sm font-medium text-gray-600 hover:text-gray-900">
               Activities
             </a>
+            <a href="/groups" className="text-sm font-medium text-gray-600 hover:text-gray-900">
+              Groups
+            </a>
+            <a href="/feed" className="text-sm font-medium text-gray-600 hover:text-gray-900">
+              Feed
+            </a>
             <a href="/settings" className="text-sm font-medium text-gray-600 hover:text-gray-900">
               Settings
             </a>
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <NotificationBell />
           {user.avatarUrl && (
             <img
               src={user.avatarUrl}

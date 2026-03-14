@@ -9,6 +9,10 @@ import webhookRouter from './routes/webhooks.js';
 import workoutsRouter from './routes/workouts.js';
 import activitiesRouter from './routes/activities.js';
 import settingsRouter from './routes/settings.js';
+import groupsRouter from './routes/groups.js';
+import groupTrainingRouter from './routes/group-training.js';
+import feedRouter from './routes/feed.js';
+import notificationsRouter from './routes/notifications.js';
 import { processActivityWorker } from './queues/activity-worker.js';
 import { processBackfillWorker } from './queues/backfill-worker.js';
 import { runReconciliation } from './cron/reconciliation.js';
@@ -37,6 +41,10 @@ app.use('/api/webhooks', webhookRouter);
 app.use('/api/workouts', workoutsRouter);
 app.use('/api/activities', activitiesRouter);
 app.use('/api/settings', settingsRouter);
+app.use('/api/groups', groupsRouter);
+app.use('/api/groups', groupTrainingRouter);
+app.use('/api/feed', feedRouter);
+app.use('/api/notifications', notificationsRouter);
 
 // Start BullMQ workers
 const activityWorker = processActivityWorker();

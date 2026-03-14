@@ -5,6 +5,10 @@ import { Planner } from './pages/Planner';
 import { Activities } from './pages/Activities';
 import { ActivityDetail } from './pages/ActivityDetail';
 import { Settings } from './pages/Settings';
+import { Groups } from './pages/Groups';
+import { GroupDetail } from './pages/GroupDetail';
+import { GroupTraining } from './pages/GroupTraining';
+import { Feed } from './pages/Feed';
 import { ScopeRequired } from './pages/ScopeRequired';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
@@ -42,6 +46,38 @@ export function App() {
           element={
             <ProtectedRoute>
               <ActivityDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/groups"
+          element={
+            <ProtectedRoute>
+              <Groups />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/groups/:groupId"
+          element={
+            <ProtectedRoute>
+              <GroupDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/groups/:groupId/training"
+          element={
+            <ProtectedRoute>
+              <GroupTraining />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/feed"
+          element={
+            <ProtectedRoute>
+              <Feed />
             </ProtectedRoute>
           }
         />

@@ -303,51 +303,51 @@ erDiagram
 #### Phase 3: Social + Groups
 
 **3.1 Group Management**
-- [ ] Create group: name, optional description → generates unique invite code/link
-- [ ] Creator becomes coach by default
-- [ ] **Invite code generation**: 6-char alphanumeric from confusion-free alphabet (`23456789ABCDEFGHJKMNPQRSTUVWXYZ` — no 0/O/1/I/L). Codes double as links: `paceup.app/join/XKFM7R`. Store in `GroupInvite` table with `maxUses`, `useCount`, `expiresAt` (default 72h).
-- [ ] **Invite redemption**: atomic transaction — check expiry + maxUses + existing membership, increment `useCount`, create `GroupMembership`, all within `prisma.$transaction`. Rate-limit redemption endpoint: 5 attempts/15min per IP.
-- [ ] New joiners default to athlete role
-- [ ] Coach can promote athlete to co-coach or remove members
-- [ ] Coach can regenerate invite (creates new code, old code stays valid until expiry)
-- [ ] Leave group: athlete or coach can leave. If last coach leaves, ownership transfers to longest-tenured member.
-- [ ] Group settings page (coach only): manage members, roles, invite management
-- [ ] Users can be in multiple groups simultaneously
+- [x] Create group: name, optional description → generates unique invite code/link
+- [x] Creator becomes coach by default
+- [x] **Invite code generation**: 6-char alphanumeric from confusion-free alphabet (`23456789ABCDEFGHJKMNPQRSTUVWXYZ` — no 0/O/1/I/L). Codes double as links: `paceup.app/join/XKFM7R`. Store in `GroupInvite` table with `maxUses`, `useCount`, `expiresAt` (default 72h).
+- [x] **Invite redemption**: atomic transaction — check expiry + maxUses + existing membership, increment `useCount`, create `GroupMembership`, all within `prisma.$transaction`. Rate-limit redemption endpoint: 5 attempts/15min per IP.
+- [x] New joiners default to athlete role
+- [x] Coach can promote athlete to co-coach or remove members
+- [x] Coach can regenerate invite (creates new code, old code stays valid until expiry)
+- [x] Leave group: athlete or coach can leave. If last coach leaves, ownership transfers to longest-tenured member.
+- [x] Group settings page (coach only): manage members, roles, invite management
+- [x] Users can be in multiple groups simultaneously
 
 **Authorization middleware stack** (layered, applied to all `/groups/:groupId/*` routes):
-- [ ] `authenticate` → verifies JWT, sets `req.userId`
-- [ ] `loadGroupMembership` → looks up membership by `(userId, groupId)`, sets `req.membership` with role. Returns 403 if not a member.
-- [ ] `requireRole('COACH')` or `requireRole('COACH', 'ATHLETE')` → checks `req.membership.role`. Composable per-route.
-- [ ] Resource-level guards inline in handlers for cross-entity checks (e.g., "is target athlete in this group?")
-- [ ] Roll our own RBAC for V1 (2 roles, group-scoped). Migrate to CASL only if roles exceed 4+ or frontend needs serialized permission rules.
+- [x] `authenticate` → verifies JWT, sets `req.userId`
+- [x] `loadGroupMembership` → looks up membership by `(userId, groupId)`, sets `req.membership` with role. Returns 403 if not a member.
+- [x] `requireRole('COACH')` or `requireRole('COACH', 'ATHLETE')` → checks `req.membership.role`. Composable per-route.
+- [x] Resource-level guards inline in handlers for cross-entity checks (e.g., "is target athlete in this group?")
+- [x] Roll our own RBAC for V1 (2 roles, group-scoped). Migrate to CASL only if roles exceed 4+ or frontend needs serialized permission rules.
 
 **3.2 Group Training View (Accountability Dashboard)**
-- [ ] Weekly grid: rows = group members, columns = Mon-Sun
-- [ ] Each cell shows: planned workout (type + distance) and actual activity (if matched)
-- [ ] Color coding: completed (green), missed (red/gray), partial (yellow), upcoming (muted)
-- [ ] Coach view: see all athletes' full details
-- [ ] Athlete view: see own full details + peer summary (completed/missed counts, not detailed metrics)
-- [ ] **Privacy enforcement at query layer**: all group-facing Prisma queries include `visibility: { not: 'PRIVATE' }` filter via reusable `visibleToGroup()` helper. Defense-in-depth: response sanitization middleware strips any private activities that slip through (logs violation for debugging). Private activities still count toward plan completion for the individual only.
-- [ ] Week navigation: browse past weeks
-- [ ] Group stats summary: total group km this week, completion rate percentage
+- [x] Weekly grid: rows = group members, columns = Mon-Sun
+- [x] Each cell shows: planned workout (type + distance) and actual activity (if matched)
+- [x] Color coding: completed (green), missed (red/gray), partial (yellow), upcoming (muted)
+- [x] Coach view: see all athletes' full details
+- [x] Athlete view: see own full details + peer summary (completed/missed counts, not detailed metrics)
+- [x] **Privacy enforcement at query layer**: all group-facing Prisma queries include `visibility: { not: 'PRIVATE' }` filter via reusable `visibleToGroup()` helper. Defense-in-depth: response sanitization middleware strips any private activities that slip through (logs violation for debugging). Private activities still count toward plan completion for the individual only.
+- [x] Week navigation: browse past weeks
+- [x] Group stats summary: total group km this week, completion rate percentage
 
 **3.3 Activity Feed**
-- [ ] Feed route: `/feed`
-- [ ] Shows activities from all members of all groups the user belongs to (no separate follow system)
-- [ ] Each feed card: athlete name + avatar, activity type, distance, pace, duration, time ago, map thumbnail
-- [ ] Read-only for V1: no likes, no comments. Training data focus, not engagement.
-- [ ] Reverse chronological order with infinite scroll pagination
-- [ ] Private activities excluded from feed
-- [ ] Filter by group (optional)
+- [x] Feed route: `/feed`
+- [x] Shows activities from all members of all groups the user belongs to (no separate follow system)
+- [x] Each feed card: athlete name + avatar, activity type, distance, pace, duration, time ago, map thumbnail
+- [x] Read-only for V1: no likes, no comments. Training data focus, not engagement.
+- [x] Reverse chronological order with infinite scroll pagination
+- [x] Private activities excluded from feed
+- [x] Filter by group (optional)
 
 **3.4 In-App Notifications**
-- [ ] Notification bell icon with unread count badge
-- [ ] Notification types (V1):
+- [x] Notification bell icon with unread count badge
+- [x] Notification types (V1):
   - Coach assigned/modified your plan
   - New member joined your group
   - Your plan was edited by another coach
-- [ ] Notification center: list view, mark as read, click to navigate
-- [ ] No email or push notifications for V1
+- [x] Notification center: list view, mark as read, click to navigate
+- [x] No email or push notifications for V1
 
 #### Phase 4: PWA + Polish
 
