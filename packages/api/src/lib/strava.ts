@@ -1,46 +1,36 @@
+import { z } from 'zod';
 import { env } from './env.js';
 
 const STRAVA_AUTH_BASE = 'https://www.strava.com/oauth';
-const STRAVA_API_BASE = 'https://www.strava.com/api/v3';
 
-export function getAuthorizationUrl(state: string): string {
+export function getAuthorizationUrl(state: string, forcePrompt = false): string {
   const params = new URLSearchParams({
     client_id: env.STRAVA_CLIENT_ID,
     redirect_uri: env.STRAVA_REDIRECT_URI,
     response_type: 'code',
-    approval_prompt: 'auto',
+    approval_prompt: forcePrompt ? 'force' : 'auto',
     scope: 'read,activity:read_all,profile:read_all',
     state,
   });
   return `${STRAVA_AUTH_BASE}/authorize?${params}`;
 }
 
-export function getReAuthorizationUrl(state: string): string {
-  const params = new URLSearchParams({
-    client_id: env.STRAVA_CLIENT_ID,
-    redirect_uri: env.STRAVA_REDIRECT_URI,
-    response_type: 'code',
-    approval_prompt: 'force',
-    scope: 'read,activity:read_all,profile:read_all',
-    state,
-  });
-  return `${STRAVA_AUTH_BASE}/authorize?${params}`;
-}
+const stravaTokenResponseSchema = z.object({
+  token_type: z.string(),
+  expires_at: z.number(),
+  expires_in: z.number(),
+  refresh_token: z.string(),
+  access_token: z.string(),
+  athlete: z.object({
+    id: z.number(),
+    firstname: z.string(),
+    lastname: z.string(),
+    profile: z.string(),
+    profile_medium: z.string(),
+  }),
+});
 
-interface StravaTokenResponse {
-  token_type: string;
-  expires_at: number;
-  expires_in: number;
-  refresh_token: string;
-  access_token: string;
-  athlete: {
-    id: number;
-    firstname: string;
-    lastname: string;
-    profile: string;
-    profile_medium: string;
-  };
-}
+export type StravaTokenResponse = z.infer<typeof stravaTokenResponseSchema>;
 
 export async function exchangeCodeForTokens(code: string): Promise<StravaTokenResponse> {
   const response = await fetch(`${STRAVA_AUTH_BASE}/token`, {
@@ -59,16 +49,19 @@ export async function exchangeCodeForTokens(code: string): Promise<StravaTokenRe
     throw new Error(`Strava token exchange failed: ${response.status} ${error}`);
   }
 
-  return response.json();
+  const data = await response.json();
+  return stravaTokenResponseSchema.parse(data);
 }
 
-interface StravaRefreshResponse {
-  token_type: string;
-  expires_at: number;
-  expires_in: number;
-  refresh_token: string;
-  access_token: string;
-}
+const stravaRefreshResponseSchema = z.object({
+  token_type: z.string(),
+  expires_at: z.number(),
+  expires_in: z.number(),
+  refresh_token: z.string(),
+  access_token: z.string(),
+});
+
+export type StravaRefreshResponse = z.infer<typeof stravaRefreshResponseSchema>;
 
 export async function refreshAccessToken(refreshToken: string): Promise<StravaRefreshResponse> {
   const response = await fetch(`${STRAVA_AUTH_BASE}/token`, {
@@ -87,17 +80,6 @@ export async function refreshAccessToken(refreshToken: string): Promise<StravaRe
     throw new Error(`Strava token refresh failed: ${response.status} ${error}`);
   }
 
-  return response.json();
-}
-
-export async function getAthleteProfile(accessToken: string) {
-  const response = await fetch(`${STRAVA_API_BASE}/athlete`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch athlete profile: ${response.status}`);
-  }
-
-  return response.json();
+  const data = await response.json();
+  return stravaRefreshResponseSchema.parse(data);
 }

@@ -27,6 +27,24 @@ router.get('/', async (req: Request, res: Response) => {
     return;
   }
 
+  // Authorization: only allow viewing other users' workouts if caller is a coach in a shared group
+  if (targetUserId !== req.userId) {
+    const sharedGroup = await prisma.groupMembership.findFirst({
+      where: {
+        userId: req.userId!,
+        role: 'COACH',
+        group: {
+          memberships: { some: { userId: targetUserId } },
+        },
+      },
+    });
+
+    if (!sharedGroup) {
+      res.status(403).json({ error: 'Not authorized to view this user\'s workouts' });
+      return;
+    }
+  }
+
   const weekStartDate = new Date(weekStart);
 
   const workouts = await prisma.plannedWorkout.findMany({
@@ -181,6 +199,15 @@ router.post('/:id/match', async (req: Request<{ id: string }>, res: Response) =>
 
 // DELETE /api/workouts/:id/match — Remove match
 router.delete('/:id/match', async (req: Request<{ id: string }>, res: Response) => {
+  const workout = await prisma.plannedWorkout.findUnique({
+    where: { id: req.params.id },
+  });
+
+  if (!workout || workout.userId !== req.userId) {
+    res.status(404).json({ error: 'Workout not found' });
+    return;
+  }
+
   await prisma.activityMatch.deleteMany({
     where: { plannedWorkoutId: req.params.id },
   });

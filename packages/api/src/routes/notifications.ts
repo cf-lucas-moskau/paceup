@@ -26,6 +26,16 @@ router.get('/', async (req: Request, res: Response) => {
   res.json({ notifications, unreadCount });
 });
 
+// PUT /api/notifications/read-all — must be before /:id/read to avoid shadowing
+router.put('/read-all', async (req: Request, res: Response) => {
+  await prisma.notification.updateMany({
+    where: { userId: req.userId!, readAt: null },
+    data: { readAt: new Date() },
+  });
+
+  res.json({ ok: true });
+});
+
 // PUT /api/notifications/:id/read
 router.put('/:id/read', async (req: Request<{ id: string }>, res: Response) => {
   const notification = await prisma.notification.findUnique({
@@ -43,16 +53,6 @@ router.put('/:id/read', async (req: Request<{ id: string }>, res: Response) => {
   });
 
   res.json({ notification: updated });
-});
-
-// PUT /api/notifications/read-all
-router.put('/read-all', async (req: Request, res: Response) => {
-  await prisma.notification.updateMany({
-    where: { userId: req.userId!, readAt: null },
-    data: { readAt: new Date() },
-  });
-
-  res.json({ ok: true });
 });
 
 export default router;

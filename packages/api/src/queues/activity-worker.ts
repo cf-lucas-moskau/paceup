@@ -15,64 +15,41 @@ function processActivityWorker() {
 
       const stravaActivity = await fetchActivity(userId, stravaActivityId, priority);
 
-      await prisma.activity.upsert({
+      const activityData = {
+        name: stravaActivity.name,
+        sportType: stravaActivity.sport_type,
+        distance: stravaActivity.distance,
+        movingTime: stravaActivity.moving_time,
+        elapsedTime: stravaActivity.elapsed_time,
+        totalElevationGain: stravaActivity.total_elevation_gain,
+        startDate: new Date(stravaActivity.start_date),
+        startDateLocal: new Date(stravaActivity.start_date_local),
+        timezone: stravaActivity.timezone,
+        summaryPolyline: stravaActivity.map?.summary_polyline ?? null,
+        averageSpeed: stravaActivity.average_speed,
+        maxSpeed: stravaActivity.max_speed,
+        averageHeartrate: stravaActivity.average_heartrate ?? null,
+        maxHeartrate: stravaActivity.max_heartrate ?? null,
+        hasHeartrate: stravaActivity.has_heartrate,
+        sufferScore: stravaActivity.suffer_score ?? null,
+        calories: stravaActivity.calories ?? null,
+        isPrivate: stravaActivity.private,
+        isManual: stravaActivity.manual,
+        rawData: JSON.parse(JSON.stringify(stravaActivity)),
+      };
+
+      const stored = await prisma.activity.upsert({
         where: { stravaActivityId: BigInt(stravaActivity.id) },
-        update: {
-          name: stravaActivity.name,
-          sportType: stravaActivity.sport_type,
-          distance: stravaActivity.distance,
-          movingTime: stravaActivity.moving_time,
-          elapsedTime: stravaActivity.elapsed_time,
-          totalElevationGain: stravaActivity.total_elevation_gain,
-          startDate: new Date(stravaActivity.start_date),
-          startDateLocal: new Date(stravaActivity.start_date_local),
-          timezone: stravaActivity.timezone,
-          summaryPolyline: stravaActivity.map?.summary_polyline ?? null,
-          averageSpeed: stravaActivity.average_speed,
-          maxSpeed: stravaActivity.max_speed,
-          averageHeartrate: stravaActivity.average_heartrate ?? null,
-          maxHeartrate: stravaActivity.max_heartrate ?? null,
-          hasHeartrate: stravaActivity.has_heartrate,
-          sufferScore: stravaActivity.suffer_score ?? null,
-          calories: stravaActivity.calories ?? null,
-          isPrivate: stravaActivity.private,
-          isManual: stravaActivity.manual,
-          rawData: JSON.parse(JSON.stringify(stravaActivity)),
-        },
+        update: activityData,
         create: {
           stravaActivityId: BigInt(stravaActivity.id),
           userId,
-          name: stravaActivity.name,
-          sportType: stravaActivity.sport_type,
-          distance: stravaActivity.distance,
-          movingTime: stravaActivity.moving_time,
-          elapsedTime: stravaActivity.elapsed_time,
-          totalElevationGain: stravaActivity.total_elevation_gain,
-          startDate: new Date(stravaActivity.start_date),
-          startDateLocal: new Date(stravaActivity.start_date_local),
-          timezone: stravaActivity.timezone,
-          summaryPolyline: stravaActivity.map?.summary_polyline ?? null,
-          averageSpeed: stravaActivity.average_speed,
-          maxSpeed: stravaActivity.max_speed,
-          averageHeartrate: stravaActivity.average_heartrate ?? null,
-          maxHeartrate: stravaActivity.max_heartrate ?? null,
-          hasHeartrate: stravaActivity.has_heartrate,
-          sufferScore: stravaActivity.suffer_score ?? null,
-          calories: stravaActivity.calories ?? null,
-          isPrivate: stravaActivity.private,
-          isManual: stravaActivity.manual,
-          rawData: JSON.parse(JSON.stringify(stravaActivity)),
+          ...activityData,
         },
       });
 
-      // Run matching after sync
-      const stored = await prisma.activity.findUnique({
-        where: { stravaActivityId: BigInt(stravaActivity.id) },
-        select: { id: true },
-      });
-      if (stored) {
-        await runMatchingForActivity(userId, stored.id);
-      }
+      // Run matching after sync — use upsert return value directly
+      await runMatchingForActivity(userId, stored.id);
 
       console.log(`Activity ${stravaActivityId} synced and matched`);
     },

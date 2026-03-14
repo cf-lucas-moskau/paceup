@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import rateLimit from 'express-rate-limit';
 import { env } from './lib/env.js';
 import authRouter from './routes/auth.js';
 import webhookRouter from './routes/webhooks.js';
@@ -17,6 +18,11 @@ import { processActivityWorker } from './queues/activity-worker.js';
 import { processBackfillWorker } from './queues/backfill-worker.js';
 import { runReconciliation } from './cron/reconciliation.js';
 
+// Global BigInt serialization — prevents "Do not know how to serialize a BigInt" errors
+(BigInt.prototype as unknown as { toJSON: () => string }).toJSON = function () {
+  return this.toString();
+};
+
 const app = express();
 
 // Middleware
@@ -30,21 +36,47 @@ app.use(
 app.use(cookieParser());
 app.use(express.json());
 
+// Rate limiting
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+const authLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+const webhookLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Health check
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // Routes
-app.use('/api/auth', authRouter);
-app.use('/api/webhooks', webhookRouter);
-app.use('/api/workouts', workoutsRouter);
-app.use('/api/activities', activitiesRouter);
-app.use('/api/settings', settingsRouter);
-app.use('/api/groups', groupsRouter);
-app.use('/api/groups', groupTrainingRouter);
-app.use('/api/feed', feedRouter);
-app.use('/api/notifications', notificationsRouter);
+app.use('/api/auth', authLimiter, authRouter);
+app.use('/api/webhooks', webhookLimiter, webhookRouter);
+app.use('/api/workouts', apiLimiter, workoutsRouter);
+app.use('/api/activities', apiLimiter, activitiesRouter);
+app.use('/api/settings', apiLimiter, settingsRouter);
+app.use('/api/groups', apiLimiter, groupsRouter);
+app.use('/api/groups', apiLimiter, groupTrainingRouter);
+app.use('/api/feed', apiLimiter, feedRouter);
+app.use('/api/notifications', apiLimiter, notificationsRouter);
+
+// Global error handler
+app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error('Unhandled error:', err.message, err.stack);
+  res.status(500).json({ error: env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
+});
 
 // Start BullMQ workers
 const activityWorker = processActivityWorker();

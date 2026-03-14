@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { z } from 'zod';
 import { env } from '../lib/env.js';
 import { prisma } from '../lib/prisma.js';
 import { clearUserMutex } from '../lib/token-manager.js';
@@ -24,22 +25,39 @@ router.get('/strava', (req: Request, res: Response) => {
   }
 });
 
-interface StravaWebhookEvent {
-  object_type: 'activity' | 'athlete';
-  object_id: number;
-  aspect_type: 'create' | 'update' | 'delete';
-  updates?: Record<string, unknown>;
-  owner_id: number;
-  subscription_id: number;
-  event_time: number;
-}
+const webhookEventSchema = z.object({
+  object_type: z.enum(['activity', 'athlete']),
+  object_id: z.number(),
+  aspect_type: z.enum(['create', 'update', 'delete']),
+  updates: z.record(z.unknown()).optional(),
+  owner_id: z.number(),
+  subscription_id: z.number(),
+  event_time: z.number(),
+});
+
+type StravaWebhookEvent = z.infer<typeof webhookEventSchema>;
 
 /**
  * POST /api/webhooks/strava — Receive Strava webhook events
  * Must respond 200 within 2 seconds. Processing happens async.
  */
 router.post('/strava', async (req: Request, res: Response) => {
-  const event = req.body as StravaWebhookEvent;
+  // Validate payload schema
+  const parsed = webhookEventSchema.safeParse(req.body);
+  if (!parsed.success) {
+    console.warn('Invalid webhook payload:', parsed.error.flatten());
+    res.status(200).json({ received: true }); // Always 200 to prevent Strava retries
+    return;
+  }
+
+  const event = parsed.data;
+
+  // Verify subscription_id matches our known subscription
+  if (env.STRAVA_SUBSCRIPTION_ID && event.subscription_id !== Number(env.STRAVA_SUBSCRIPTION_ID)) {
+    console.warn(`Unknown subscription_id: ${event.subscription_id}`);
+    res.status(200).json({ received: true });
+    return;
+  }
 
   // Respond immediately — Strava requires <2s response
   res.status(200).json({ received: true });

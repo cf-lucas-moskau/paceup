@@ -45,19 +45,20 @@ export async function getValidAccessToken(userId: string): Promise<string> {
     const needsRefresh = expiresAt.getTime() - now.getTime() < REFRESH_BUFFER_SECONDS * 1000;
 
     if (!needsRefresh) {
-      return user.accessToken;
+      return decrypt(user.accessToken);
     }
 
-    // Decrypt refresh token, call Strava, re-encrypt new refresh token
+    // Decrypt refresh token, call Strava, re-encrypt both tokens
     const decryptedRefreshToken = decrypt(user.refreshToken);
     const tokens = await refreshAccessToken(decryptedRefreshToken);
 
+    const encryptedNewAccessToken = encrypt(tokens.access_token);
     const encryptedNewRefreshToken = encrypt(tokens.refresh_token);
 
     await prisma.user.update({
       where: { id: userId },
       data: {
-        accessToken: tokens.access_token,
+        accessToken: encryptedNewAccessToken,
         refreshToken: encryptedNewRefreshToken,
         tokenExpiresAt: new Date(tokens.expires_at * 1000),
       },

@@ -2,7 +2,9 @@ import { useSearchParams } from 'react-router-dom';
 
 export function ScopeRequired() {
   const [searchParams] = useSearchParams();
-  const reauthUrl = searchParams.get('reauth');
+  const rawUrl = searchParams.get('reauth');
+  // Only allow Strava OAuth URLs to prevent open redirect
+  const reauthUrl = rawUrl?.startsWith('https://www.strava.com/oauth/') ? rawUrl : null;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50">

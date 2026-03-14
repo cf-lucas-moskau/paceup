@@ -28,6 +28,7 @@ export const env = {
     'http://localhost:3000/api/auth/strava/callback'
   ),
   STRAVA_VERIFY_TOKEN: requireEnv('STRAVA_VERIFY_TOKEN'),
+  STRAVA_SUBSCRIPTION_ID: process.env.STRAVA_SUBSCRIPTION_ID || '',
   JWT_SECRET: requireEnv('JWT_SECRET'),
   TOKEN_ENCRYPTION_KEY: requireEnv('TOKEN_ENCRYPTION_KEY'),
   FRONTEND_URL: optionalEnv('FRONTEND_URL', 'http://localhost:5173'),

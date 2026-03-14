@@ -1,13 +1,4 @@
 import { useState, useMemo } from 'react';
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { format, addDays } from 'date-fns';
 import { Navbar } from '../components/Navbar';
 import { WorkoutCard } from '../components/WorkoutCard';
@@ -35,10 +26,6 @@ export function Planner() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalDay, setModalDay] = useState(0);
   const [editingWorkout, setEditingWorkout] = useState<PlannedWorkout | null>(null);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
-  );
 
   // Group workouts by day
   const workoutsByDay = useMemo(() => {
@@ -93,18 +80,6 @@ export function Planner() {
         ...workoutData,
       });
     }
-  }
-
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-
-    // Find which day the workout is being moved to
-    const workout = data?.workouts.find((w) => w.id === active.id);
-    if (!workout) return;
-
-    // For now, reorder within the same day (DnD between days would need droppable zones)
-    // Full cross-day DnD can be added with droppable day columns
   }
 
   function navigateWeek(direction: -1 | 1) {
@@ -176,60 +151,56 @@ export function Planner() {
 
         {/* Week grid */}
         <div className="mt-6 grid grid-cols-7 gap-2">
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            {DAY_LABELS.map((label, dayIndex) => {
-              const dayDate = addDays(currentWeek, dayIndex);
-              const isToday = format(new Date(), 'yyyy-MM-dd') === format(dayDate, 'yyyy-MM-dd');
-              const dayWorkouts = workoutsByDay[dayIndex] || [];
+          {DAY_LABELS.map((label, dayIndex) => {
+            const dayDate = addDays(currentWeek, dayIndex);
+            const isToday = format(new Date(), 'yyyy-MM-dd') === format(dayDate, 'yyyy-MM-dd');
+            const dayWorkouts = workoutsByDay[dayIndex] || [];
 
-              return (
-                <div
-                  key={dayIndex}
-                  className={`min-h-[200px] rounded-lg border p-2 ${
-                    isToday ? 'border-brand-400 bg-brand-50/30' : 'border-gray-200 bg-white'
-                  }`}
-                >
-                  <div className="mb-2 flex items-center justify-between">
-                    <div>
-                      <span className={`text-xs font-semibold ${isToday ? 'text-brand-600' : 'text-gray-500'}`}>
-                        {label}
-                      </span>
-                      <span className="ml-1 text-xs text-gray-400">
-                        {format(dayDate, 'd')}
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => handleAddClick(dayIndex)}
-                      className="rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-                    >
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                      </svg>
-                    </button>
+            return (
+              <div
+                key={dayIndex}
+                className={`min-h-[200px] rounded-lg border p-2 ${
+                  isToday ? 'border-brand-400 bg-brand-50/30' : 'border-gray-200 bg-white'
+                }`}
+              >
+                <div className="mb-2 flex items-center justify-between">
+                  <div>
+                    <span className={`text-xs font-semibold ${isToday ? 'text-brand-600' : 'text-gray-500'}`}>
+                      {label}
+                    </span>
+                    <span className="ml-1 text-xs text-gray-400">
+                      {format(dayDate, 'd')}
+                    </span>
                   </div>
-
-                  <SortableContext items={dayWorkouts.map((w) => w.id)} strategy={verticalListSortingStrategy}>
-                    <div className="space-y-1.5">
-                      {isLoading ? (
-                        <div className="h-12 animate-pulse rounded bg-gray-100" />
-                      ) : dayWorkouts.length > 0 ? (
-                        dayWorkouts.map((workout) => (
-                          <WorkoutCard
-                            key={workout.id}
-                            workout={workout}
-                            onEdit={handleEditClick}
-                            onDelete={(id) => deleteWorkout.mutate(id)}
-                          />
-                        ))
-                      ) : (
-                        <p className="py-4 text-center text-[11px] text-gray-300">No workout</p>
-                      )}
-                    </div>
-                  </SortableContext>
+                  <button
+                    onClick={() => handleAddClick(dayIndex)}
+                    className="rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                    </svg>
+                  </button>
                 </div>
-              );
-            })}
-          </DndContext>
+
+                <div className="space-y-1.5">
+                  {isLoading ? (
+                    <div className="h-12 animate-pulse rounded bg-gray-100" />
+                  ) : dayWorkouts.length > 0 ? (
+                    dayWorkouts.map((workout) => (
+                      <WorkoutCard
+                        key={workout.id}
+                        workout={workout}
+                        onEdit={handleEditClick}
+                        onDelete={(id) => deleteWorkout.mutate(id)}
+                      />
+                    ))
+                  ) : (
+                    <p className="py-4 text-center text-[11px] text-gray-300">No workout</p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </main>
 

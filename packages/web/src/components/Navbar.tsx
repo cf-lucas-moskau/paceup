@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { NotificationBell } from './NotificationBell';
 
@@ -10,28 +11,28 @@ export function Navbar() {
     <nav className="border-b border-gray-200 bg-white">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
         <div className="flex items-center gap-6">
-          <a href="/dashboard" className="text-xl font-bold text-brand-500">
+          <Link to="/dashboard" className="text-xl font-bold text-brand-500">
             PaceUp
-          </a>
+          </Link>
           <div className="hidden gap-4 sm:flex">
-            <a href="/dashboard" className="text-sm font-medium text-gray-600 hover:text-gray-900">
+            <Link to="/dashboard" className="text-sm font-medium text-gray-600 hover:text-gray-900">
               Dashboard
-            </a>
-            <a href="/planner" className="text-sm font-medium text-gray-600 hover:text-gray-900">
+            </Link>
+            <Link to="/planner" className="text-sm font-medium text-gray-600 hover:text-gray-900">
               Planner
-            </a>
-            <a href="/activities" className="text-sm font-medium text-gray-600 hover:text-gray-900">
+            </Link>
+            <Link to="/activities" className="text-sm font-medium text-gray-600 hover:text-gray-900">
               Activities
-            </a>
-            <a href="/groups" className="text-sm font-medium text-gray-600 hover:text-gray-900">
+            </Link>
+            <Link to="/groups" className="text-sm font-medium text-gray-600 hover:text-gray-900">
               Groups
-            </a>
-            <a href="/feed" className="text-sm font-medium text-gray-600 hover:text-gray-900">
+            </Link>
+            <Link to="/feed" className="text-sm font-medium text-gray-600 hover:text-gray-900">
               Feed
-            </a>
-            <a href="/settings" className="text-sm font-medium text-gray-600 hover:text-gray-900">
+            </Link>
+            <Link to="/settings" className="text-sm font-medium text-gray-600 hover:text-gray-900">
               Settings
-            </a>
+            </Link>
           </div>
         </div>
         <div className="flex items-center gap-3">

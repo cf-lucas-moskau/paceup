@@ -1,5 +1,3 @@
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import type { PlannedWorkout } from '../lib/hooks';
 import { formatDistance, formatDuration } from '../lib/date-utils';
 
@@ -35,32 +33,19 @@ interface WorkoutCardProps {
 }
 
 export function WorkoutCard({ workout, onEdit, onDelete }: WorkoutCardProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: workout.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
   const colorClass = WORKOUT_COLORS[workout.workoutType] || 'bg-gray-100 border-gray-300 text-gray-700';
   const matchLevel = getMatchLevel(workout.match?.confidence);
   const matchBorder = MATCH_COLORS[matchLevel];
 
   return (
     <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      className={`group cursor-grab rounded-md border p-2 text-xs ${colorClass} border-l-4 ${matchBorder} active:cursor-grabbing`}
+      className={`group rounded-md border p-2 text-xs ${colorClass} border-l-4 ${matchBorder}`}
     >
       <div className="flex items-start justify-between">
         <span className="font-semibold">{workout.workoutType}</span>
         <div className="hidden gap-1 group-hover:flex">
           <button
-            onClick={(e) => { e.stopPropagation(); onEdit(workout); }}
+            onClick={() => onEdit(workout)}
             className="rounded p-0.5 hover:bg-black/10"
           >
             <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -68,7 +53,7 @@ export function WorkoutCard({ workout, onEdit, onDelete }: WorkoutCardProps) {
             </svg>
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); onDelete(workout.id); }}
+            onClick={() => onDelete(workout.id)}
             className="rounded p-0.5 hover:bg-black/10"
           >
             <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

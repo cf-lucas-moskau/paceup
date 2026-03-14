@@ -11,13 +11,21 @@ router.get('/', async (req: Request, res: Response) => {
   const cursor = req.query.cursor as string | undefined;
   const groupIdFilter = req.query.groupId as string | undefined;
 
-  // Get all groups the user belongs to
+  // Single query: get member IDs from user's groups (with optional filter)
   const memberships = await prisma.groupMembership.findMany({
     where: {
-      userId: req.userId!,
-      ...(groupIdFilter ? { groupId: groupIdFilter } : {}),
+      group: {
+        memberships: {
+          some: {
+            userId: req.userId!,
+            ...(groupIdFilter ? { groupId: groupIdFilter } : {}),
+          },
+        },
+      },
+      userId: { not: req.userId! },
     },
-    select: { groupId: true },
+    select: { userId: true },
+    distinct: ['userId'],
   });
 
   if (memberships.length === 0) {
@@ -25,23 +33,7 @@ router.get('/', async (req: Request, res: Response) => {
     return;
   }
 
-  const groupIds = memberships.map((m) => m.groupId);
-
-  // Get all member IDs from those groups (excluding self)
-  const groupMembers = await prisma.groupMembership.findMany({
-    where: {
-      groupId: { in: groupIds },
-      userId: { not: req.userId! },
-    },
-    select: { userId: true },
-  });
-
-  const memberIds = [...new Set(groupMembers.map((m) => m.userId))];
-
-  if (memberIds.length === 0) {
-    res.json({ activities: [], nextCursor: null });
-    return;
-  }
+  const memberIds = memberships.map((m) => m.userId);
 
   // Fetch activities from group members (non-private only)
   const activities = await prisma.activity.findMany({

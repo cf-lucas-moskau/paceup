@@ -1,8 +1,7 @@
-import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
+import { createCipheriv, createDecipheriv, randomBytes, createHash } from 'crypto';
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 16;
-const AUTH_TAG_LENGTH = 16;
 const KEY_VERSION = 1;
 
 function getKey(): Buffer {
@@ -10,7 +9,12 @@ function getKey(): Buffer {
   if (!key || key.length < 32) {
     throw new Error('TOKEN_ENCRYPTION_KEY must be at least 32 characters');
   }
-  return Buffer.from(key.slice(0, 32), 'utf8');
+  // If the key is 64 hex chars (256-bit key), use it directly as hex
+  if (/^[0-9a-fA-F]{64}$/.test(key)) {
+    return Buffer.from(key, 'hex');
+  }
+  // Otherwise, derive a proper 256-bit key via SHA-256
+  return createHash('sha256').update(key).digest();
 }
 
 export function encrypt(plaintext: string): string {

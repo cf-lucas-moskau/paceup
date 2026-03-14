@@ -20,9 +20,9 @@ const state: RateLimitState = {
   lastUpdated: new Date(),
 };
 
-export type ThrottleLevel = 'none' | 'backfill_paused' | 'user_paused' | 'all_paused';
+type ThrottleLevel = 'none' | 'backfill_paused' | 'user_paused' | 'all_paused';
 
-export function getThrottleLevel(): ThrottleLevel {
+function getThrottleLevel(): ThrottleLevel {
   const shortPct = state.shortTermUsage / state.shortTermLimit;
   const dailyPct = state.dailyUsage / state.dailyLimit;
 
@@ -70,6 +70,3 @@ export function updateFromHeaders(headers: Headers): void {
   state.lastUpdated = new Date();
 }
 
-export function getRateLimitState(): Readonly<RateLimitState> {
-  return { ...state };
-}

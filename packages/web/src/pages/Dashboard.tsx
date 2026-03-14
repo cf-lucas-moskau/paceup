@@ -12,7 +12,7 @@ export function Dashboard() {
   const currentWeek = getWeekStart();
   const weekStartISO = getWeekStartISO(currentWeek);
   const { data: workoutsData } = useWorkouts(weekStartISO);
-  const { data: activitiesData } = useActivities();
+  const { data: activitiesData } = useActivities(5);
   const { data: groupsData } = useGroups();
 
   const workouts = workoutsData?.workouts ?? [];

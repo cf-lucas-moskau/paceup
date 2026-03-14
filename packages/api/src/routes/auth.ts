@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import { prisma } from '../lib/prisma.js';
 import { encrypt } from '../lib/encryption.js';
 import { signToken } from '../lib/jwt.js';
-import { exchangeCodeForTokens, getAuthorizationUrl, getReAuthorizationUrl } from '../lib/strava.js';
+import { exchangeCodeForTokens, getAuthorizationUrl } from '../lib/strava.js';
 import { env } from '../lib/env.js';
 import { backfillQueue } from '../queues/index.js';
 
@@ -57,7 +57,7 @@ router.get('/strava/callback', async (req: Request, res: Response) => {
       sameSite: 'lax',
     });
     res.redirect(
-      `${env.FRONTEND_URL}/auth/scope-required?reauth=${encodeURIComponent(getReAuthorizationUrl(reAuthState))}`
+      `${env.FRONTEND_URL}/auth/scope-required?reauth=${encodeURIComponent(getAuthorizationUrl(reAuthState, true))}`
     );
     return;
   }
@@ -65,7 +65,8 @@ router.get('/strava/callback', async (req: Request, res: Response) => {
   try {
     const tokens = await exchangeCodeForTokens(code);
 
-    // Encrypt the refresh token before storing
+    // Encrypt both tokens before storing
+    const encryptedAccessToken = encrypt(tokens.access_token);
     const encryptedRefreshToken = encrypt(tokens.refresh_token);
 
     // Check if user already exists (to determine if backfill needed)
@@ -81,7 +82,7 @@ router.get('/strava/callback', async (req: Request, res: Response) => {
       update: {
         name: `${tokens.athlete.firstname} ${tokens.athlete.lastname}`,
         avatarUrl: tokens.athlete.profile_medium,
-        accessToken: tokens.access_token,
+        accessToken: encryptedAccessToken,
         refreshToken: encryptedRefreshToken,
         tokenExpiresAt: new Date(tokens.expires_at * 1000),
         isConnected: true,
@@ -90,7 +91,7 @@ router.get('/strava/callback', async (req: Request, res: Response) => {
         stravaAthleteId: tokens.athlete.id,
         name: `${tokens.athlete.firstname} ${tokens.athlete.lastname}`,
         avatarUrl: tokens.athlete.profile_medium,
-        accessToken: tokens.access_token,
+        accessToken: encryptedAccessToken,
         refreshToken: encryptedRefreshToken,
         tokenExpiresAt: new Date(tokens.expires_at * 1000),
       },

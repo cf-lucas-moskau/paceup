@@ -119,12 +119,12 @@ export interface ActivityDetail extends ActivitySummary {
   }[];
 }
 
-export function useActivities() {
+export function useActivities(limit = 20) {
   return useInfiniteQuery({
-    queryKey: ['activities'],
+    queryKey: ['activities', limit],
     queryFn: ({ pageParam }) =>
       apiFetch<{ activities: ActivitySummary[]; nextCursor: string | null }>(
-        `/activities?limit=20${pageParam ? `&cursor=${pageParam}` : ''}`
+        `/activities?limit=${limit}${pageParam ? `&cursor=${pageParam}` : ''}`
       ),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,

@@ -1,4 +1,4 @@
-import { startOfWeek, addDays, format, subWeeks, addWeeks } from 'date-fns';
+import { startOfWeek, format } from 'date-fns';
 
 /** Get Monday of the week containing the given date */
 export function getWeekStart(date: Date = new Date()): Date {
@@ -7,25 +7,6 @@ export function getWeekStart(date: Date = new Date()): Date {
 
 export function getWeekStartISO(date: Date = new Date()): string {
   return format(getWeekStart(date), 'yyyy-MM-dd');
-}
-
-export function getDayOfWeek(date: Date): string[] {
-  const monday = getWeekStart(date);
-  return Array.from({ length: 7 }, (_, i) =>
-    format(addDays(monday, i), 'EEE d MMM')
-  );
-}
-
-export function getDayDates(weekStart: Date): Date[] {
-  return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-}
-
-export function prevWeek(weekStart: Date): Date {
-  return subWeeks(weekStart, 1);
-}
-
-export function nextWeek(weekStart: Date): Date {
-  return addWeeks(weekStart, 1);
 }
 
 export function formatPace(metersPerSecond: number, unit: 'metric' | 'imperial' = 'metric'): string {

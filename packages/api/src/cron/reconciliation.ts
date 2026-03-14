@@ -54,13 +54,3 @@ export async function runReconciliation(): Promise<void> {
 
   console.log(`Reconciliation complete. Checked ${activeUsers.length} users.`);
 }
-
-/**
- * Subscription health check: verify Strava webhook subscription exists.
- * In production, this would call GET /push_subscriptions and alert if missing.
- */
-export async function checkSubscriptionHealth(): Promise<void> {
-  // This requires the Strava client_id and client_secret as query params
-  // Placeholder — will be implemented when deploying to production
-  console.log('Subscription health check: placeholder (implement for production)');
-}
