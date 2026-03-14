@@ -1,0 +1,176 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String   @id @default(cuid())
+  stravaAthleteId Int      @unique
+  name            String
+  avatarUrl       String?
+  timezone        String   @default("UTC")
+  unitPreference  String   @default("metric")
+  accessToken     String
+  refreshToken    String
+  tokenExpiresAt  DateTime
+  isConnected     Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  activities      Activity[]
+  memberships     GroupMembership[]
+  plannedWorkouts PlannedWorkout[]   @relation("WorkoutOwner")
+  assignedPlans   PlannedWorkout[]   @relation("WorkoutAssigner")
+  notifications   Notification[]
+  groupsCreated   Group[]            @relation("GroupCreator")
+  invitesSent     GroupInvite[]
+}
+
+model Activity {
+  id                 String   @id @default(cuid())
+  stravaActivityId   BigInt   @unique
+  userId             String
+  name               String
+  sportType          String
+  distance           Float
+  movingTime         Int
+  elapsedTime        Int
+  totalElevationGain Float    @default(0)
+  startDate          DateTime
+  startDateLocal     DateTime
+  timezone           String?
+  summaryPolyline    String?
+  averageSpeed       Float?
+  maxSpeed           Float?
+  averageHeartrate   Float?
+  maxHeartrate       Float?
+  hasHeartrate       Boolean  @default(false)
+  sufferScore        Int?
+  calories           Float?
+  isPrivate          Boolean  @default(false)
+  isManual           Boolean  @default(false)
+  rawData            Json?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  streams ActivityStream[]
+  match   ActivityMatch?
+
+  @@index([userId, startDate])
+}
+
+model ActivityStream {
+  id         String   @id @default(cuid())
+  activityId String
+  streamType String
+  data       Json
+  createdAt  DateTime @default(now())
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@unique([activityId, streamType])
+}
+
+model Group {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  creator     User              @relation("GroupCreator", fields: [createdById], references: [id])
+  memberships GroupMembership[]
+  invites     GroupInvite[]
+}
+
+model GroupMembership {
+  id       String   @id @default(cuid())
+  userId   String
+  groupId  String
+  role     String   @default("ATHLETE")
+  joinedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+  @@index([groupId, role])
+  @@index([userId])
+}
+
+model PlannedWorkout {
+  id               String   @id @default(cuid())
+  userId           String
+  weekStartDate    DateTime
+  dayOfWeek        Int
+  workoutType      String
+  targetDistance    Float?
+  targetDuration   Int?
+  description      String?
+  assignedByUserId String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user       User            @relation("WorkoutOwner", fields: [userId], references: [id], onDelete: Cascade)
+  assignedBy User?           @relation("WorkoutAssigner", fields: [assignedByUserId], references: [id])
+  match      ActivityMatch?
+
+  @@unique([userId, weekStartDate, dayOfWeek])
+  @@index([userId, weekStartDate])
+}
+
+model ActivityMatch {
+  id               String   @id @default(cuid())
+  activityId       String   @unique
+  plannedWorkoutId String   @unique
+  confidence       Float
+  isManualOverride Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  activity       Activity       @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  plannedWorkout PlannedWorkout @relation(fields: [plannedWorkoutId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String
+  message   String
+  data      Json?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+}
+
+model GroupInvite {
+  id        String   @id @default(cuid())
+  groupId   String
+  code      String   @unique
+  role      String   @default("ATHLETE")
+  createdBy String
+  expiresAt DateTime
+  maxUses   Int      @default(10)
+  useCount  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  group   Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  creator User  @relation(fields: [createdBy], references: [id])
+
+  @@index([code])
+  @@index([groupId])
+}
+
+model StravaWebhookEvent {
+  eventKey    String   @id
+  payload     Json
+  processedAt DateTime @default(now())
+}
