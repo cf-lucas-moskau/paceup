@@ -7,7 +7,7 @@ export function ScopeRequired() {
   const reauthUrl = rawUrl?.startsWith('https://www.strava.com/oauth/') ? rawUrl : null;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
+    <div className="flex min-h-screen items-center justify-center bg-neo-white">
       <div className="max-w-md text-center">
         <h1 className="text-2xl font-bold text-gray-900">Permission Required</h1>
         <p className="mt-3 text-gray-600">
@@ -18,7 +18,7 @@ export function ScopeRequired() {
         {reauthUrl && (
           <a
             href={reauthUrl}
-            className="mt-6 inline-block rounded-lg bg-brand-500 px-6 py-3 font-semibold text-white hover:bg-brand-600"
+            className="neo-btn mt-6 inline-block bg-brand-500 text-white hover:bg-brand-600"
           >
             Try Again
           </a>

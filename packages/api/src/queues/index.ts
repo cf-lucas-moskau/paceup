@@ -14,13 +14,13 @@ export const activityQueue = new Queue('activity-sync', {
   },
 });
 
-export const backfillQueue = new Queue('activity-backfill', {
+export const syncListQueue = new Queue('sync-list', {
   connection: redisConnection,
   defaultJobOptions: {
-    attempts: 5,
+    attempts: 3,
     backoff: {
       type: 'exponential',
-      delay: 30000,
+      delay: 10000,
     },
     removeOnComplete: { count: 100 },
     removeOnFail: { count: 500 },
@@ -34,8 +34,8 @@ export interface ActivitySyncJobData {
   priority: 'webhook' | 'user';
 }
 
-export interface BackfillJobData {
+export interface SyncListJobData {
   userId: string;
-  page: number;
   afterTimestamp?: number;
+  page?: number;
 }

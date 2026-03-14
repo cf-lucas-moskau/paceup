@@ -2,10 +2,11 @@ import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
 import { prisma } from '../lib/prisma.js';
 import { encrypt } from '../lib/encryption.js';
-import { signToken } from '../lib/jwt.js';
+import { signToken, verifyToken } from '../lib/jwt.js';
 import { exchangeCodeForTokens, getAuthorizationUrl } from '../lib/strava.js';
 import { env } from '../lib/env.js';
-import { backfillQueue } from '../queues/index.js';
+import { syncListQueue } from '../queues/index.js';
+import { sseManager } from '../services/sync-status.js';
 
 const router = Router();
 
@@ -69,7 +70,7 @@ router.get('/strava/callback', async (req: Request, res: Response) => {
     const encryptedAccessToken = encrypt(tokens.access_token);
     const encryptedRefreshToken = encrypt(tokens.refresh_token);
 
-    // Check if user already exists (to determine if backfill needed)
+    // Check if user already exists (to determine if initial sync needed)
     const existingUser = await prisma.user.findUnique({
       where: { stravaAthleteId: tokens.athlete.id },
       select: { id: true },
@@ -97,17 +98,16 @@ router.get('/strava/callback', async (req: Request, res: Response) => {
       },
     });
 
-    // Trigger backfill for new users — import last 6 months of activities
+    // Trigger initial sync for new users — import last 30 days of activities
     if (isNewUser) {
-      const sixMonthsAgo = Math.floor(Date.now() / 1000) - 6 * 30 * 24 * 60 * 60;
-      await backfillQueue.add(
-        `backfill-${user.id}-page-1`,
+      const thirtyDaysAgo = Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60;
+      await syncListQueue.add(
+        `sync-${user.id}`,
         {
           userId: user.id,
-          page: 1,
-          afterTimestamp: sixMonthsAgo,
+          afterTimestamp: thirtyDaysAgo,
         },
-        { jobId: `backfill-${user.id}-page-1` }
+        { jobId: `sync-${user.id}-initial` }
       );
     }
 
@@ -133,7 +133,18 @@ router.get('/strava/callback', async (req: Request, res: Response) => {
 });
 
 // POST /api/auth/logout
-router.post('/logout', (_req: Request, res: Response) => {
+router.post('/logout', (req: Request, res: Response) => {
+  // Close SSE connections before clearing the cookie
+  const token = req.cookies?.token;
+  if (token) {
+    try {
+      const payload = verifyToken(token);
+      sseManager.disconnectUser(payload.userId);
+    } catch {
+      // Token invalid/expired — no SSE connections to clean up
+    }
+  }
+
   res.clearCookie('token', { path: '/' });
   res.json({ ok: true });
 });

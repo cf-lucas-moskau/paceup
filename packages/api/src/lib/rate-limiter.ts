@@ -1,6 +1,6 @@
 /**
  * Strava API rate limiter.
- * Limits: 200 requests per 15 minutes, 2,000 requests per day.
+ * Limits: 300 read requests per 15 minutes, 3,000 read requests per day.
  * Tracks usage from X-RateLimit-Usage response headers.
  */
 
@@ -14,32 +14,29 @@ interface RateLimitState {
 
 const state: RateLimitState = {
   shortTermUsage: 0,
-  shortTermLimit: 200,
+  shortTermLimit: 300,
   dailyUsage: 0,
-  dailyLimit: 2000,
+  dailyLimit: 3000,
   lastUpdated: new Date(),
 };
 
-type ThrottleLevel = 'none' | 'backfill_paused' | 'user_paused' | 'all_paused';
+type ThrottleLevel = 'none' | 'user_paused' | 'all_paused';
 
 function getThrottleLevel(): ThrottleLevel {
   const shortPct = state.shortTermUsage / state.shortTermLimit;
   const dailyPct = state.dailyUsage / state.dailyLimit;
 
   if (dailyPct >= 0.95 || shortPct >= 0.95) return 'all_paused';
-  if (dailyPct >= 0.90 || shortPct >= 0.90) return 'user_paused';
-  if (dailyPct >= 0.80 || shortPct >= 0.80) return 'backfill_paused';
+  if (dailyPct >= 0.80 || shortPct >= 0.80) return 'user_paused';
   return 'none';
 }
 
-export function canMakeRequest(priority: 'webhook' | 'user' | 'backfill'): boolean {
+export function canMakeRequest(priority: 'webhook' | 'user'): boolean {
   const level = getThrottleLevel();
 
   switch (level) {
     case 'none':
       return true;
-    case 'backfill_paused':
-      return priority !== 'backfill';
     case 'user_paused':
       return priority === 'webhook';
     case 'all_paused':

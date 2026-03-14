@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { format, addDays } from 'date-fns';
 import { Navbar } from '../components/Navbar';
+import { Button } from '../components/ui';
 import { WorkoutCard } from '../components/WorkoutCard';
 import { AddWorkoutModal } from '../components/AddWorkoutModal';
 import {
@@ -10,7 +11,7 @@ import {
   useDeleteWorkout,
   type PlannedWorkout,
 } from '../lib/hooks';
-import { getWeekStart, getWeekStartISO, formatDistance } from '../lib/date-utils';
+import { getWeekStart, getWeekStartISO, formatDistance, formatDuration } from '../lib/date-utils';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -91,57 +92,48 @@ export function Planner() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-neo-white pb-20 md:pb-0">
       <Navbar />
       <main className="mx-auto max-w-7xl px-4 py-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Training Plan</h1>
+            <h1 className="text-2xl font-bold text-neo-black">Training Plan</h1>
             <p className="mt-1 text-sm text-gray-500">
               Week of {format(currentWeek, 'MMMM d, yyyy')}
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => navigateWeek(-1)}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100"
-            >
+            <Button variant="secondary" size="sm" onClick={() => navigateWeek(-1)}>
               ← Prev
-            </button>
-            <button
-              onClick={() => setCurrentWeek(getWeekStart())}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100"
-            >
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => setCurrentWeek(getWeekStart())}>
               Today
-            </button>
-            <button
-              onClick={() => navigateWeek(1)}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100"
-            >
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => navigateWeek(1)}>
               Next →
-            </button>
+            </Button>
           </div>
         </div>
 
         {/* Weekly compliance bar */}
         {weekStats.planned > 0 && (
-          <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4">
+          <div className="neo-card mt-4 p-4">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-600">
-                Planned: {weekStats.planned} workouts / {formatDistance(weekStats.plannedDist)}
+              <span className="text-gray-500">
+                Planned: <span className="font-mono font-bold text-neo-black">{weekStats.planned}</span> workouts / {formatDistance(weekStats.plannedDist)}
               </span>
-              <span className="font-semibold text-gray-900">{compliancePct}% compliance</span>
-              <span className="text-gray-600">
-                Actual: {weekStats.actual} workouts / {formatDistance(weekStats.actualDist)}
+              <span className="font-mono text-lg font-bold text-neo-black">{compliancePct}%</span>
+              <span className="text-gray-500">
+                Actual: <span className="font-mono font-bold text-neo-black">{weekStats.actual}</span> workouts / {formatDistance(weekStats.actualDist)}
               </span>
             </div>
-            <div className="mt-2 h-2 rounded-full bg-gray-200">
+            <div className="mt-2 h-3 overflow-hidden rounded-full border-2 border-neo-black bg-gray-100">
               <div
-                className={`h-2 rounded-full transition-all ${
-                  compliancePct >= 90 ? 'bg-green-500' :
-                  compliancePct >= 75 ? 'bg-yellow-500' :
-                  compliancePct >= 50 ? 'bg-orange-500' : 'bg-red-500'
+                className={`h-full transition-all ${
+                  compliancePct >= 90 ? 'bg-neo-green' :
+                  compliancePct >= 75 ? 'bg-neo-yellow' :
+                  compliancePct >= 50 ? 'bg-brand-500' : 'bg-neo-red'
                 }`}
                 style={{ width: `${Math.min(compliancePct, 100)}%` }}
               />
@@ -149,8 +141,8 @@ export function Planner() {
           </div>
         )}
 
-        {/* Week grid */}
-        <div className="mt-6 grid grid-cols-7 gap-2">
+        {/* Week grid — 7 columns on desktop, vertical stack on mobile */}
+        <div className="mt-6 grid gap-2 md:grid-cols-7">
           {DAY_LABELS.map((label, dayIndex) => {
             const dayDate = addDays(currentWeek, dayIndex);
             const isToday = format(new Date(), 'yyyy-MM-dd') === format(dayDate, 'yyyy-MM-dd');
@@ -159,24 +151,30 @@ export function Planner() {
             return (
               <div
                 key={dayIndex}
-                className={`min-h-[200px] rounded-lg border p-2 ${
-                  isToday ? 'border-brand-400 bg-brand-50/30' : 'border-gray-200 bg-white'
+                className={`min-h-[120px] rounded-xl border-3 p-2 md:min-h-[200px] ${
+                  isToday
+                    ? 'border-brand-500 bg-brand-50/30 shadow-neo-sm'
+                    : 'border-neo-black bg-white'
                 }`}
               >
                 <div className="mb-2 flex items-center justify-between">
-                  <div>
-                    <span className={`text-xs font-semibold ${isToday ? 'text-brand-600' : 'text-gray-500'}`}>
+                  <div className="flex items-center gap-1">
+                    <span
+                      className={`text-xs font-bold ${
+                        isToday ? 'text-brand-500' : 'text-neo-black'
+                      }`}
+                    >
                       {label}
                     </span>
-                    <span className="ml-1 text-xs text-gray-400">
+                    <span className="font-mono text-xs text-gray-400">
                       {format(dayDate, 'd')}
                     </span>
                   </div>
                   <button
                     onClick={() => handleAddClick(dayIndex)}
-                    className="rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                    className="flex h-6 w-6 items-center justify-center rounded-md border-2 border-neo-black bg-neo-yellow text-neo-black transition-all hover:shadow-neo-sm active:translate-x-px active:translate-y-px active:shadow-none"
                   >
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                     </svg>
                   </button>
@@ -184,7 +182,7 @@ export function Planner() {
 
                 <div className="space-y-1.5">
                   {isLoading ? (
-                    <div className="h-12 animate-pulse rounded bg-gray-100" />
+                    <div className="h-12 animate-pulse rounded-lg bg-gray-100" />
                   ) : dayWorkouts.length > 0 ? (
                     dayWorkouts.map((workout) => (
                       <WorkoutCard
@@ -202,6 +200,38 @@ export function Planner() {
             );
           })}
         </div>
+
+        {/* Unmatched activities */}
+        {(data?.unmatchedActivities?.length ?? 0) > 0 && (
+          <div className="mt-6">
+            <div className="mb-3 flex items-center gap-2">
+              <div className="h-px flex-1 bg-gray-300" />
+              <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
+                Unmatched Activities
+              </span>
+              <div className="h-px flex-1 bg-gray-300" />
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {data!.unmatchedActivities.map((a) => (
+                <div
+                  key={a.id}
+                  className="flex items-center justify-between rounded-xl border-2 border-dashed border-gray-300 bg-white px-4 py-3 transition-colors hover:border-neo-black"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-neo-black">{a.name}</p>
+                    <p className="text-xs text-gray-400">
+                      {format(new Date(a.startDateLocal), 'EEE d MMM')} · {a.sportType}
+                    </p>
+                  </div>
+                  <div className="ml-3 flex flex-col items-end font-mono text-xs text-gray-500">
+                    <span>{formatDistance(a.distance)}</span>
+                    <span>{formatDuration(a.movingTime)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </main>
 
       <AddWorkoutModal

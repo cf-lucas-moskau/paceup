@@ -61,7 +61,7 @@ function computeDistanceScore(
     if (ratio >= 0.85 && ratio <= 1.25) return 1.0;
     if (ratio >= 1.25 && ratio <= 1.50) return 0.8;
     if (ratio >= 0.70 && ratio <= 0.85) return 0.7;
-    if (ratio < 0.50 || ratio > 2.0) return 0.1;
+    if (ratio < 0.50 || ratio > 2.0) return 0.0; // Too far off → no match
     return 0.5;
   }
 
@@ -71,7 +71,7 @@ function computeDistanceScore(
     if (ratio >= 0.85 && ratio <= 1.25) return 1.0;
     if (ratio >= 1.25 && ratio <= 1.50) return 0.8;
     if (ratio >= 0.70 && ratio <= 0.85) return 0.7;
-    if (ratio < 0.50 || ratio > 2.0) return 0.1;
+    if (ratio < 0.50 || ratio > 2.0) return 0.0; // Too far off → no match
     return 0.5;
   }
 

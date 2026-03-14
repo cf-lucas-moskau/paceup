@@ -14,7 +14,7 @@ import {
   AreaChart,
 } from 'recharts';
 import { Navbar } from '../components/Navbar';
-import { useActivity } from '../lib/hooks';
+import { useActivity, useActivityStreams } from '../lib/hooks';
 import { formatDistance, formatDuration, formatPace } from '../lib/date-utils';
 import { format } from 'date-fns';
 
@@ -33,15 +33,17 @@ function getHrZone(hr: number, maxHr: number): number {
 export function ActivityDetail() {
   const { id } = useParams<{ id: string }>();
   const { data, isLoading, error } = useActivity(id!);
+  const { data: streamsData, isLoading: streamsLoading, isError: streamsError, refetch: refetchStreams } = useActivityStreams(id!);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-neo-white pb-20 md:pb-0">
         <Navbar />
         <main className="mx-auto max-w-7xl px-4 py-8">
           <div className="space-y-4">
             <div className="h-8 w-48 animate-pulse rounded bg-gray-200" />
-            <div className="h-64 animate-pulse rounded-lg bg-gray-200" />
+            <div className="h-40 animate-pulse rounded-lg bg-gray-200" />
+            <div className="h-[250px] animate-pulse rounded-lg bg-gray-200" />
           </div>
         </main>
       </div>
@@ -50,7 +52,7 @@ export function ActivityDetail() {
 
   if (error || !data?.activity) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-neo-white pb-20 md:pb-0">
         <Navbar />
         <main className="mx-auto max-w-7xl px-4 py-8">
           <p className="text-gray-500">Activity not found.</p>
@@ -60,22 +62,27 @@ export function ActivityDetail() {
   }
 
   const activity = data.activity;
+
+  // Build streams from the separate streams query
   const streams: Record<string, unknown[]> = {};
-  for (const s of activity.streams || []) {
-    streams[s.streamType] = s.data as unknown[];
+  if (streamsData?.streams) {
+    for (const s of streamsData.streams) {
+      streams[s.streamType] = s.data as unknown[];
+    }
   }
 
-  // Build pace chart data
   const paceData = buildPaceData(streams);
   const elevationData = buildElevationData(streams);
   const hrZoneData = buildHrZoneData(streams, activity.maxHeartrate || 190);
   const splitsData = buildSplitsData(streams);
 
+  const isManual = activity.isManual;
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-neo-white pb-20 md:pb-0">
       <Navbar />
       <main className="mx-auto max-w-7xl px-4 py-8">
-        {/* Summary card */}
+        {/* Summary card — renders immediately */}
         <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
           <div className="flex items-start justify-between">
             <div>
@@ -111,7 +118,6 @@ export function ActivityDetail() {
             )}
           </div>
 
-          {/* Matched workout info */}
           {activity.match && (
             <div className="mt-4 rounded-md bg-green-50 p-3 text-sm text-green-800">
               Matched to: <strong>{activity.match.plannedWorkout.workoutType}</strong>
@@ -123,100 +129,122 @@ export function ActivityDetail() {
           )}
         </div>
 
+        {/* Charts — loaded separately with skeletons */}
         <div className="mt-6 grid gap-6 lg:grid-cols-5">
-          {/* Charts column */}
           <div className="space-y-6 lg:col-span-3">
-            {/* Pace chart */}
-            {paceData.length > 0 && (
-              <ChartCard title="Pace">
-                <ResponsiveContainer width="100%" height={250}>
-                  <ComposedChart data={paceData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="km" tick={{ fontSize: 11 }} />
-                    <YAxis
-                      yAxisId="pace"
-                      reversed
-                      tick={{ fontSize: 11 }}
-                      tickFormatter={(v: number) => {
-                        const m = Math.floor(v / 60);
-                        const s = Math.round(v % 60);
-                        return `${m}:${s.toString().padStart(2, '0')}`;
-                      }}
-                    />
-                    {streams.heartrate && (
-                      <YAxis yAxisId="hr" orientation="right" tick={{ fontSize: 11 }} />
-                    )}
-                    <Tooltip />
-                    <Line
-                      yAxisId="pace"
-                      type="monotone"
-                      dataKey="paceSeconds"
-                      stroke="#ff6b35"
-                      dot={false}
-                      strokeWidth={2}
-                      name="Pace (s/km)"
-                    />
-                    {streams.heartrate && (
-                      <Area
-                        yAxisId="hr"
-                        type="monotone"
-                        dataKey="hr"
-                        fill="#ef444433"
-                        stroke="#ef4444"
-                        strokeWidth={1}
-                        name="Heart Rate"
-                      />
-                    )}
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </ChartCard>
-            )}
+            {streamsLoading ? (
+              <>
+                <ChartSkeleton height="h-[250px]" />
+                <ChartSkeleton height="h-[180px]" />
+              </>
+            ) : streamsError ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
+                <p className="text-sm text-red-600">Unable to load chart data</p>
+                <button
+                  onClick={() => refetchStreams()}
+                  className="mt-2 rounded-md bg-red-100 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-200"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : isManual && Object.keys(streams).length === 0 ? (
+              <div className="rounded-lg border border-gray-200 bg-white p-6 text-center">
+                <p className="text-sm text-gray-500">Manual activity — no GPS/stream data available</p>
+              </div>
+            ) : (
+              <>
+                {paceData.length > 0 && (
+                  <ChartCard title="Pace">
+                    <ResponsiveContainer width="100%" height={250}>
+                      <ComposedChart data={paceData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis dataKey="km" tick={{ fontSize: 11 }} />
+                        <YAxis
+                          yAxisId="pace"
+                          reversed
+                          tick={{ fontSize: 11 }}
+                          tickFormatter={(v: number) => {
+                            const m = Math.floor(v / 60);
+                            const s = Math.round(v % 60);
+                            return `${m}:${s.toString().padStart(2, '0')}`;
+                          }}
+                        />
+                        {streams.heartrate && (
+                          <YAxis yAxisId="hr" orientation="right" tick={{ fontSize: 11 }} />
+                        )}
+                        <Tooltip />
+                        <Line
+                          yAxisId="pace"
+                          type="monotone"
+                          dataKey="paceSeconds"
+                          stroke="#ff6b35"
+                          dot={false}
+                          strokeWidth={2}
+                          name="Pace (s/km)"
+                        />
+                        {streams.heartrate && (
+                          <Area
+                            yAxisId="hr"
+                            type="monotone"
+                            dataKey="hr"
+                            fill="#ef444433"
+                            stroke="#ef4444"
+                            strokeWidth={1}
+                            name="Heart Rate"
+                          />
+                        )}
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </ChartCard>
+                )}
 
-            {/* Elevation profile */}
-            {elevationData.length > 0 && (
-              <ChartCard title="Elevation">
-                <ResponsiveContainer width="100%" height={180}>
-                  <AreaChart data={elevationData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="km" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} />
-                    <Tooltip />
-                    <Area
-                      type="monotone"
-                      dataKey="altitude"
-                      fill="#86efac44"
-                      stroke="#22c55e"
-                      strokeWidth={2}
-                      name="Elevation (m)"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </ChartCard>
-            )}
+                {elevationData.length > 0 && (
+                  <ChartCard title="Elevation">
+                    <ResponsiveContainer width="100%" height={180}>
+                      <AreaChart data={elevationData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis dataKey="km" tick={{ fontSize: 11 }} />
+                        <YAxis tick={{ fontSize: 11 }} />
+                        <Tooltip />
+                        <Area
+                          type="monotone"
+                          dataKey="altitude"
+                          fill="#86efac44"
+                          stroke="#22c55e"
+                          strokeWidth={2}
+                          name="Elevation (m)"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </ChartCard>
+                )}
 
-            {/* HR Zone distribution */}
-            {hrZoneData.length > 0 && activity.hasHeartrate && (
-              <ChartCard title="Heart Rate Zones">
-                <ResponsiveContainer width="100%" height={180}>
-                  <BarChart data={hrZoneData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis type="number" tickFormatter={(v: number) => `${v}%`} tick={{ fontSize: 11 }} />
-                    <YAxis type="category" dataKey="zone" tick={{ fontSize: 11 }} width={60} />
-                    <Tooltip formatter={(v) => `${Number(v).toFixed(1)}%`} />
-                    <Bar dataKey="percentage" name="Time in Zone">
-                      {hrZoneData.map((_, i) => (
-                        <Cell key={i} fill={HR_ZONE_COLORS[i]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartCard>
+                {hrZoneData.length > 0 && activity.hasHeartrate && (
+                  <ChartCard title="Heart Rate Zones">
+                    <ResponsiveContainer width="100%" height={180}>
+                      <BarChart data={hrZoneData} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis type="number" tickFormatter={(v: number) => `${v}%`} tick={{ fontSize: 11 }} />
+                        <YAxis type="category" dataKey="zone" tick={{ fontSize: 11 }} width={60} />
+                        <Tooltip formatter={(v) => `${Number(v).toFixed(1)}%`} />
+                        <Bar dataKey="percentage" name="Time in Zone">
+                          {hrZoneData.map((_, i) => (
+                            <Cell key={i} fill={HR_ZONE_COLORS[i]} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartCard>
+                )}
+              </>
             )}
           </div>
 
           {/* Splits column */}
           <div className="lg:col-span-2">
-            {splitsData.length > 0 && (
+            {streamsLoading ? (
+              <ChartSkeleton height="h-[300px]" />
+            ) : splitsData.length > 0 ? (
               <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
                 <h3 className="mb-3 text-sm font-semibold text-gray-900">Splits</h3>
                 <table className="w-full text-sm">
@@ -242,9 +270,8 @@ export function ActivityDetail() {
                   </tbody>
                 </table>
               </div>
-            )}
+            ) : null}
 
-            {/* Strava attribution */}
             <p className="mt-4 text-center text-xs text-gray-400">
               Powered by Strava
             </p>
@@ -261,6 +288,12 @@ function Stat({ label, value }: { label: string; value: string }) {
       <p className="text-xs text-gray-500">{label}</p>
       <p className="text-lg font-semibold text-gray-900">{value}</p>
     </div>
+  );
+}
+
+function ChartSkeleton({ height }: { height: string }) {
+  return (
+    <div className={`${height} animate-pulse rounded-lg border border-gray-200 bg-gray-100`} />
   );
 }
 

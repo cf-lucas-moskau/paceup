@@ -4,6 +4,7 @@ import { env } from '../lib/env.js';
 import { prisma } from '../lib/prisma.js';
 import { clearUserMutex } from '../lib/token-manager.js';
 import { activityQueue } from '../queues/index.js';
+import { sseManager } from '../services/sync-status.js';
 
 const router = Router();
 
@@ -53,7 +54,7 @@ router.post('/strava', async (req: Request, res: Response) => {
   const event = parsed.data;
 
   // Verify subscription_id matches our known subscription
-  if (env.STRAVA_SUBSCRIPTION_ID && event.subscription_id !== Number(env.STRAVA_SUBSCRIPTION_ID)) {
+  if (event.subscription_id !== Number(env.STRAVA_SUBSCRIPTION_ID)) {
     console.warn(`Unknown subscription_id: ${event.subscription_id}`);
     res.status(200).json({ received: true });
     return;
@@ -129,6 +130,9 @@ async function handleAthleteEvent(userId: string, event: StravaWebhookEvent): Pr
     await prisma.activity.deleteMany({ where: { userId } });
 
     clearUserMutex(userId);
+
+    // Close any active SSE connections for this user
+    sseManager.broadcastToUser(userId, 'deauthorized', { message: 'Strava disconnected' });
   }
 }
 

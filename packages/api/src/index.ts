@@ -15,8 +15,11 @@ import groupTrainingRouter from './routes/group-training.js';
 import feedRouter from './routes/feed.js';
 import notificationsRouter from './routes/notifications.js';
 import { processActivityWorker } from './queues/activity-worker.js';
-import { processBackfillWorker } from './queues/backfill-worker.js';
+import { processSyncWorker } from './queues/sync-worker.js';
 import { runReconciliation } from './cron/reconciliation.js';
+import syncStatusRouter from './routes/sync-status.js';
+import { sseManager } from './services/sync-status.js';
+import { startSyncEvents, stopSyncEvents } from './services/sync-events.js';
 
 // Global BigInt serialization — prevents "Do not know how to serialize a BigInt" errors
 (BigInt.prototype as unknown as { toJSON: () => string }).toJSON = function () {
@@ -61,6 +64,15 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// SSE route — separate rate limiter (long-lived connections need different limits)
+const sseLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10, // 10 connection attempts per minute per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/sync', sseLimiter, syncStatusRouter);
+
 // Routes
 app.use('/api/auth', authLimiter, authRouter);
 app.use('/api/webhooks', webhookLimiter, webhookRouter);
@@ -80,8 +92,13 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 
 // Start BullMQ workers
 const activityWorker = processActivityWorker();
-const backfillWorker = processBackfillWorker();
+const syncWorker = processSyncWorker();
 console.log('BullMQ workers started');
+
+// Start SSE infrastructure
+sseManager.start();
+startSyncEvents();
+console.log('SSE sync events started');
 
 // Reconciliation cron — every 30 minutes
 const THIRTY_MINUTES = 30 * 60 * 1000;
@@ -97,8 +114,10 @@ app.listen(env.PORT, () => {
 process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down gracefully');
   clearInterval(reconciliationInterval);
+  await sseManager.shutdown();
+  await stopSyncEvents();
   await activityWorker.close();
-  await backfillWorker.close();
+  await syncWorker.close();
   process.exit(0);
 });
 

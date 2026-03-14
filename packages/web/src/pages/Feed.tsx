@@ -14,7 +14,7 @@ export function Feed() {
   const groups = groupsData?.groups ?? [];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-neo-white pb-20 md:pb-0">
       <Navbar />
       <main className="mx-auto max-w-2xl px-4 py-8">
         <div className="flex items-center justify-between">

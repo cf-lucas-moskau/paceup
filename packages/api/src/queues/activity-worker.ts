@@ -13,6 +13,8 @@ function processActivityWorker() {
 
       console.log(`Syncing activity ${stravaActivityId} for user ${userId}`);
 
+      await job.updateProgress({ userId, status: 'fetching', stravaActivityId });
+
       const stravaActivity = await fetchActivity(userId, stravaActivityId, priority);
 
       const activityData = {
@@ -51,6 +53,7 @@ function processActivityWorker() {
       // Run matching after sync — use upsert return value directly
       await runMatchingForActivity(userId, stored.id);
 
+      await job.updateProgress({ userId, status: 'complete', stravaActivityId });
       console.log(`Activity ${stravaActivityId} synced and matched`);
     },
     {

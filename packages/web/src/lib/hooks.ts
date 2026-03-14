@@ -29,11 +29,23 @@ export interface PlannedWorkout {
   } | null;
 }
 
+export interface UnmatchedActivity {
+  id: string;
+  name: string;
+  sportType: string;
+  distance: number;
+  movingTime: number;
+  startDateLocal: string;
+  averageSpeed: number | null;
+}
+
 export function useWorkouts(weekStart: string) {
   return useQuery({
     queryKey: ['workouts', weekStart],
     queryFn: () =>
-      apiFetch<{ workouts: PlannedWorkout[] }>(`/workouts?weekStart=${weekStart}`),
+      apiFetch<{ workouts: PlannedWorkout[]; unmatchedActivities: UnmatchedActivity[] }>(
+        `/workouts?weekStart=${weekStart}`
+      ),
     enabled: !!weekStart,
   });
 }
@@ -111,6 +123,7 @@ export interface ActivitySummary {
 }
 
 export interface ActivityDetail extends ActivitySummary {
+  isManual: boolean;
   rawData: unknown;
   streams: {
     id: string;
@@ -119,13 +132,28 @@ export interface ActivityDetail extends ActivitySummary {
   }[];
 }
 
-export function useActivities(limit = 20) {
+export interface ActivityFilters {
+  q?: string;
+  sport?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+export function useActivities(filters?: ActivityFilters, limit = 20) {
   return useInfiniteQuery({
-    queryKey: ['activities', limit],
-    queryFn: ({ pageParam }) =>
-      apiFetch<{ activities: ActivitySummary[]; nextCursor: string | null }>(
-        `/activities?limit=${limit}${pageParam ? `&cursor=${pageParam}` : ''}`
-      ),
+    queryKey: ['activities', limit, filters],
+    queryFn: ({ pageParam }) => {
+      const params = new URLSearchParams();
+      params.set('limit', String(limit));
+      if (pageParam) params.set('cursor', pageParam);
+      if (filters?.q) params.set('q', filters.q);
+      if (filters?.sport) params.set('sport', filters.sport);
+      if (filters?.startDate) params.set('startDate', filters.startDate);
+      if (filters?.endDate) params.set('endDate', filters.endDate);
+      return apiFetch<{ activities: ActivitySummary[]; nextCursor: string | null }>(
+        `/activities?${params}`
+      );
+    },
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
   });
@@ -136,6 +164,30 @@ export function useActivity(id: string) {
     queryKey: ['activity', id],
     queryFn: () => apiFetch<{ activity: ActivityDetail }>(`/activities/${id}`),
     enabled: !!id,
+  });
+}
+
+export function useActivityStreams(id: string) {
+  return useQuery({
+    queryKey: ['activity-streams', id],
+    queryFn: () =>
+      apiFetch<{ streams: { id: string; streamType: string; data: unknown }[] }>(
+        `/activities/${id}/streams`
+      ),
+    enabled: !!id,
+    staleTime: 5 * 60 * 1000, // Streams don't change — cache 5 min
+    retry: 1,
+  });
+}
+
+// --- Sync hooks ---
+
+export function useTriggerSync() {
+  return useMutation({
+    mutationFn: () =>
+      apiFetch<{ status: string; lastSyncAt?: string }>('/sync/trigger', {
+        method: 'POST',
+      }),
   });
 }
 

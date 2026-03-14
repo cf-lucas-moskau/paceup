@@ -17,7 +17,7 @@ class StravaApiError extends Error {
 async function stravaFetch(
   userId: string,
   path: string,
-  priority: 'webhook' | 'user' | 'backfill' = 'webhook'
+  priority: 'webhook' | 'user' = 'webhook'
 ): Promise<Response> {
   if (!canMakeRequest(priority)) {
     throw new StravaApiError('Rate limited — request paused', 429);
@@ -72,7 +72,7 @@ export interface StravaActivity {
 export async function fetchActivity(
   userId: string,
   activityId: number | bigint,
-  priority: 'webhook' | 'user' | 'backfill' = 'webhook'
+  priority: 'webhook' | 'user' = 'webhook'
 ): Promise<StravaActivity> {
   const response = await stravaFetch(userId, `/activities/${activityId}`, priority);
   return response.json();
@@ -81,7 +81,7 @@ export async function fetchActivity(
 export async function fetchActivityStreams(
   userId: string,
   activityId: number | bigint,
-  priority: 'webhook' | 'user' | 'backfill' = 'webhook'
+  priority: 'webhook' | 'user' = 'webhook'
 ): Promise<Record<string, { data: unknown[] }>> {
   const keys = 'time,distance,heartrate,altitude,velocity_smooth,latlng';
   const response = await stravaFetch(
@@ -95,7 +95,7 @@ export async function fetchActivityStreams(
 export async function fetchAthleteActivities(
   userId: string,
   params: { after?: number; before?: number; page?: number; perPage?: number },
-  priority: 'webhook' | 'user' | 'backfill' = 'backfill'
+  priority: 'webhook' | 'user' = 'user'
 ): Promise<StravaActivity[]> {
   const searchParams = new URLSearchParams();
   if (params.after) searchParams.set('after', String(params.after));

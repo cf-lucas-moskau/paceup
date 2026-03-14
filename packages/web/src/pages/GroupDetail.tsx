@@ -22,7 +22,7 @@ export function GroupDetail() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-neo-white pb-20 md:pb-0">
         <Navbar />
         <main className="mx-auto max-w-3xl px-4 py-8">
           <div className="h-8 w-48 animate-pulse rounded bg-gray-200" />
@@ -34,7 +34,7 @@ export function GroupDetail() {
 
   if (!data?.group) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-neo-white pb-20 md:pb-0">
         <Navbar />
         <main className="mx-auto max-w-3xl px-4 py-8">
           <p className="text-gray-500">Group not found.</p>
@@ -53,7 +53,7 @@ export function GroupDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-neo-white pb-20 md:pb-0">
       <Navbar />
       <main className="mx-auto max-w-3xl px-4 py-8">
         <div className="flex items-center justify-between">

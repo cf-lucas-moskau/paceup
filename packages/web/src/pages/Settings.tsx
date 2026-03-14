@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Navbar } from '../components/Navbar';
+import { Card, Button, Badge } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { useUpdateSettings } from '../lib/hooks';
 
@@ -24,90 +25,84 @@ export function Settings() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-neo-white pb-20 md:pb-0">
       <Navbar />
       <main className="mx-auto max-w-xl px-4 py-8">
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+        <h1 className="text-2xl font-bold text-neo-black">Settings</h1>
 
-        <div className="mt-6 space-y-6">
+        <div className="mt-6 space-y-4">
           {/* Unit preference */}
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-            <h3 className="font-medium text-gray-900">Unit Preference</h3>
+          <Card>
+            <h3 className="font-bold text-neo-black">Unit Preference</h3>
             <div className="mt-3 flex gap-3">
               <button
                 onClick={() => setUnit('metric')}
-                className={`flex-1 rounded-md border px-4 py-2 text-sm transition ${
+                className={`flex-1 rounded-lg border-3 px-4 py-2 text-sm font-semibold transition ${
                   unit === 'metric'
-                    ? 'border-brand-500 bg-brand-50 font-medium text-brand-700'
-                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                    ? 'border-brand-500 bg-brand-50 text-brand-700 shadow-neo-sm'
+                    : 'border-neo-black text-gray-600 hover:bg-gray-50'
                 }`}
               >
                 Metric (km)
               </button>
               <button
                 onClick={() => setUnit('imperial')}
-                className={`flex-1 rounded-md border px-4 py-2 text-sm transition ${
+                className={`flex-1 rounded-lg border-3 px-4 py-2 text-sm font-semibold transition ${
                   unit === 'imperial'
-                    ? 'border-brand-500 bg-brand-50 font-medium text-brand-700'
-                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                    ? 'border-brand-500 bg-brand-50 text-brand-700 shadow-neo-sm'
+                    : 'border-neo-black text-gray-600 hover:bg-gray-50'
                 }`}
               >
                 Imperial (mi)
               </button>
             </div>
-          </div>
+          </Card>
 
           {/* Timezone */}
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-            <h3 className="font-medium text-gray-900">Timezone</h3>
+          <Card>
+            <h3 className="font-bold text-neo-black">Timezone</h3>
             <select
               value={timezone}
               onChange={(e) => setTimezone(e.target.value)}
-              className="mt-3 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className="neo-input mt-3"
             >
               {Intl.supportedValuesOf('timeZone').map((tz) => (
                 <option key={tz} value={tz}>{tz}</option>
               ))}
             </select>
-          </div>
+          </Card>
 
           {/* Strava connection */}
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-            <h3 className="font-medium text-gray-900">Strava Connection</h3>
+          <Card>
+            <h3 className="font-bold text-neo-black">Strava Connection</h3>
             <div className="mt-3 flex items-center gap-3">
               {user?.isConnected ? (
                 <>
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-700">
-                    <span className="h-2 w-2 rounded-full bg-green-500" />
-                    Connected
-                  </span>
+                  <Badge color="green">Connected</Badge>
                   <span className="text-sm text-gray-500">{user.name}</span>
                 </>
               ) : (
                 <>
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1 text-sm font-medium text-red-700">
-                    <span className="h-2 w-2 rounded-full bg-red-500" />
-                    Disconnected
-                  </span>
+                  <Badge color="red">Disconnected</Badge>
                   <a
                     href="/api/auth/strava"
-                    className="text-sm text-brand-500 hover:text-brand-600"
+                    className="text-sm font-semibold text-brand-500 hover:text-brand-600"
                   >
                     Reconnect
                   </a>
                 </>
               )}
             </div>
-          </div>
+          </Card>
 
           {/* Save button */}
-          <button
+          <Button
             onClick={handleSave}
             disabled={updateSettings.isPending}
-            className="w-full rounded-md bg-brand-500 px-4 py-2.5 font-medium text-white hover:bg-brand-600 disabled:opacity-50"
+            className="w-full"
           >
             {updateSettings.isPending ? 'Saving...' : saved ? 'Saved!' : 'Save Changes'}
-          </button>
+          </Button>
         </div>
 
         <p className="mt-8 text-center text-xs text-gray-400">Powered by Strava</p>

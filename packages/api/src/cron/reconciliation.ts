@@ -22,7 +22,7 @@ export async function runReconciliation(): Promise<void> {
       const activities = await fetchAthleteActivities(
         user.id,
         { after: twoHoursAgo, page: 1, perPage: 30 },
-        'backfill'
+        'user'
       );
 
       for (const activity of activities) {

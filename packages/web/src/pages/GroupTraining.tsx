@@ -23,7 +23,7 @@ export function GroupTraining() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-neo-white pb-20 md:pb-0">
       <Navbar />
       <main className="mx-auto max-w-7xl px-4 py-6">
         {/* Header */}

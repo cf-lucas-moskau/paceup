@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
 import { loadGroupMembership, requireRole } from '../middleware/group-auth.js';
+import { sseManager } from '../services/sync-status.js';
 import { z } from 'zod';
 import crypto from 'crypto';
 
@@ -246,8 +247,18 @@ router.post('/join/:code', async (req: Request<{ code: string }>, res: Response)
         });
       }
 
-      return { ...m, groupName: invite.group.name };
+      return { ...m, groupName: invite.group.name, groupId: invite.groupId };
     });
+
+    // Invalidate group cache for all existing members so they see the new member
+    const existingMembers = await prisma.groupMembership.findMany({
+      where: { groupId: membership.groupId, userId: { not: req.userId! } },
+      select: { userId: true },
+    });
+    for (const member of existingMembers) {
+      sseManager.clearGroupCacheForUser(member.userId);
+    }
+    sseManager.clearGroupCacheForUser(req.userId!);
 
     res.status(201).json({ membership });
   } catch (err) {
@@ -344,11 +355,22 @@ router.delete(
       }
     }
 
+    // Get group members before deletion for cache invalidation
+    const groupMembers = await prisma.groupMembership.findMany({
+      where: { groupId: req.params.groupId },
+      select: { userId: true },
+    });
+
     await prisma.groupMembership.delete({
       where: {
         userId_groupId: { userId: req.params.memberId, groupId: req.params.groupId },
       },
     });
+
+    // Invalidate group cache for all affected members
+    for (const member of groupMembers) {
+      sseManager.clearGroupCacheForUser(member.userId);
+    }
 
     res.json({ ok: true });
   }

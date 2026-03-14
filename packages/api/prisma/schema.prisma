@@ -18,6 +18,7 @@ model User {
   refreshToken    String
   tokenExpiresAt  DateTime
   isConnected     Boolean  @default(true)
+  lastSyncAt      DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -109,6 +110,7 @@ model PlannedWorkout {
   userId           String
   weekStartDate    DateTime
   dayOfWeek        Int
+  sortOrder        Int      @default(0)
   workoutType      String
   targetDistance    Float?
   targetDuration   Int?
@@ -121,7 +123,7 @@ model PlannedWorkout {
   assignedBy User?           @relation("WorkoutAssigner", fields: [assignedByUserId], references: [id])
   match      ActivityMatch?
 
-  @@unique([userId, weekStartDate, dayOfWeek])
+  @@index([userId, weekStartDate, dayOfWeek])
   @@index([userId, weekStartDate])
 }
 

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
+import { runMatchingForUser } from '../lib/matching.js';
 import { z } from 'zod';
 
 const router = Router();
@@ -71,10 +72,32 @@ router.get('/', async (req: Request, res: Response) => {
         select: { id: true, name: true },
       },
     },
-    orderBy: [{ dayOfWeek: 'asc' }],
+    orderBy: [{ dayOfWeek: 'asc' }, { sortOrder: 'asc' }],
   });
 
-  res.json({ workouts });
+  // Also return unmatched activities for this week (for dual planner display)
+  const weekEnd = new Date(weekStartDate);
+  weekEnd.setDate(weekEnd.getDate() + 7);
+
+  const unmatchedActivities = await prisma.activity.findMany({
+    where: {
+      userId: targetUserId,
+      startDateLocal: { gte: weekStartDate, lt: weekEnd },
+      match: null,
+    },
+    select: {
+      id: true,
+      name: true,
+      sportType: true,
+      distance: true,
+      movingTime: true,
+      startDateLocal: true,
+      averageSpeed: true,
+    },
+    orderBy: { startDateLocal: 'asc' },
+  });
+
+  res.json({ workouts, unmatchedActivities });
 });
 
 // POST /api/workouts
@@ -88,27 +111,30 @@ router.post('/', async (req: Request, res: Response) => {
   const { weekStartDate, dayOfWeek, workoutType, targetDistance, targetDuration, description } =
     parsed.data;
 
-  try {
-    const workout = await prisma.plannedWorkout.create({
-      data: {
-        userId: req.userId!,
-        weekStartDate,
-        dayOfWeek,
-        workoutType,
-        targetDistance: targetDistance ?? null,
-        targetDuration: targetDuration ?? null,
-        description: description ?? null,
-      },
-    });
+  // Determine sortOrder: count existing workouts on this day
+  const existingCount = await prisma.plannedWorkout.count({
+    where: { userId: req.userId!, weekStartDate, dayOfWeek },
+  });
 
-    res.status(201).json({ workout });
-  } catch (err: unknown) {
-    if (err && typeof err === 'object' && 'code' in err && err.code === 'P2002') {
-      res.status(409).json({ error: 'A workout already exists for this day' });
-      return;
-    }
-    throw err;
-  }
+  const workout = await prisma.plannedWorkout.create({
+    data: {
+      userId: req.userId!,
+      weekStartDate,
+      dayOfWeek,
+      sortOrder: existingCount,
+      workoutType,
+      targetDistance: targetDistance ?? null,
+      targetDuration: targetDuration ?? null,
+      description: description ?? null,
+    },
+  });
+
+  // Re-run matching for this week (async, don't block response)
+  runMatchingForUser(req.userId!, weekStartDate).catch((err) =>
+    console.error('Matching after workout create failed:', err)
+  );
+
+  res.status(201).json({ workout });
 });
 
 // PUT /api/workouts/:id
@@ -133,10 +159,22 @@ router.put('/:id', async (req: Request<{ id: string }>, res: Response) => {
     return;
   }
 
+  // Clear existing auto-match if workout type/distance changed
+  if (parsed.data.workoutType || parsed.data.targetDistance !== undefined || parsed.data.targetDuration !== undefined) {
+    await prisma.activityMatch.deleteMany({
+      where: { plannedWorkoutId: req.params.id, isManualOverride: false },
+    });
+  }
+
   const workout = await prisma.plannedWorkout.update({
     where: { id: req.params.id },
     data: parsed.data,
   });
+
+  // Re-run matching for this week
+  runMatchingForUser(req.userId!, existing.weekStartDate).catch((err) =>
+    console.error('Matching after workout update failed:', err)
+  );
 
   res.json({ workout });
 });
@@ -158,6 +196,12 @@ router.delete('/:id', async (req: Request<{ id: string }>, res: Response) => {
   }
 
   await prisma.plannedWorkout.delete({ where: { id: req.params.id } });
+
+  // Re-run matching — freed activities may match other workouts
+  runMatchingForUser(req.userId!, existing.weekStartDate).catch((err) =>
+    console.error('Matching after workout delete failed:', err)
+  );
+
   res.json({ ok: true });
 });
 
