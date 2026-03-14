@@ -77,11 +77,14 @@ function processSyncWorker() {
         console.log(`Sync list complete for user ${userId}: ${enqueued} new activities from ${activities.length} total`);
       }
 
-      // Update lastSyncAt after the list call completes
-      await prisma.user.update({
-        where: { id: userId },
-        data: { lastSyncAt: new Date() },
-      });
+      // Only update lastSyncAt on the final page — if page 2 fails,
+      // the next sync will re-fetch from the correct point
+      if (activities.length < 200) {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { lastSyncAt: new Date() },
+        });
+      }
 
       return { userId, total: enqueued };
     },

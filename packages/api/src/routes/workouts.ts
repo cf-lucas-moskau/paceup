@@ -206,13 +206,17 @@ router.delete('/:id', async (req: Request<{ id: string }>, res: Response) => {
 });
 
 // POST /api/workouts/:id/match — Manual match override
-router.post('/:id/match', async (req: Request<{ id: string }>, res: Response) => {
-  const { activityId } = req.body;
+const manualMatchSchema = z.object({
+  activityId: z.string().min(1),
+});
 
-  if (!activityId) {
+router.post('/:id/match', async (req: Request<{ id: string }>, res: Response) => {
+  const parsed = manualMatchSchema.safeParse(req.body);
+  if (!parsed.success) {
     res.status(400).json({ error: 'activityId required' });
     return;
   }
+  const { activityId } = parsed.data;
 
   const workout = await prisma.plannedWorkout.findUnique({
     where: { id: req.params.id },
@@ -220,6 +224,17 @@ router.post('/:id/match', async (req: Request<{ id: string }>, res: Response) =>
 
   if (!workout || workout.userId !== req.userId) {
     res.status(404).json({ error: 'Workout not found' });
+    return;
+  }
+
+  // Verify the activity belongs to the same user (prevents IDOR)
+  const activity = await prisma.activity.findUnique({
+    where: { id: activityId },
+    select: { userId: true },
+  });
+
+  if (!activity || activity.userId !== req.userId) {
+    res.status(404).json({ error: 'Activity not found' });
     return;
   }
 
