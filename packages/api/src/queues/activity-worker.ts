@@ -2,6 +2,7 @@ import { Worker, Job } from 'bullmq';
 import { redisConnection } from '../lib/redis.js';
 import { prisma } from '../lib/prisma.js';
 import { fetchActivity, StravaApiError } from '../lib/strava-api.js';
+import { runMatchingForActivity } from '../lib/matching.js';
 import type { ActivitySyncJobData } from './index.js';
 
 function processActivityWorker() {
@@ -64,7 +65,16 @@ function processActivityWorker() {
         },
       });
 
-      console.log(`Activity ${stravaActivityId} synced successfully`);
+      // Run matching after sync
+      const stored = await prisma.activity.findUnique({
+        where: { stravaActivityId: BigInt(stravaActivity.id) },
+        select: { id: true },
+      });
+      if (stored) {
+        await runMatchingForActivity(userId, stored.id);
+      }
+
+      console.log(`Activity ${stravaActivityId} synced and matched`);
     },
     {
       connection: redisConnection,

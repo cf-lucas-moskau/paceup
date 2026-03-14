@@ -6,6 +6,9 @@ import cookieParser from 'cookie-parser';
 import { env } from './lib/env.js';
 import authRouter from './routes/auth.js';
 import webhookRouter from './routes/webhooks.js';
+import workoutsRouter from './routes/workouts.js';
+import activitiesRouter from './routes/activities.js';
+import settingsRouter from './routes/settings.js';
 import { processActivityWorker } from './queues/activity-worker.js';
 import { processBackfillWorker } from './queues/backfill-worker.js';
 import { runReconciliation } from './cron/reconciliation.js';
@@ -31,6 +34,9 @@ app.get('/api/health', (_req, res) => {
 // Routes
 app.use('/api/auth', authRouter);
 app.use('/api/webhooks', webhookRouter);
+app.use('/api/workouts', workoutsRouter);
+app.use('/api/activities', activitiesRouter);
+app.use('/api/settings', settingsRouter);
 
 // Start BullMQ workers
 const activityWorker = processActivityWorker();
