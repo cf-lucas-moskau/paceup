@@ -240,64 +240,64 @@ erDiagram
 #### Phase 2: Core Features (Planner + Analysis)
 
 **2.1 Weekly Training Planner**
-- [ ] Week view component: custom 7-column CSS Grid (`grid-template-columns: repeat(7, 1fr)`) with day headers. **Not** a calendar library — simpler, lighter, full design control. Each column is a `@dnd-kit` droppable zone.
-- [ ] Drag-and-drop with `@dnd-kit`: `useSortable` for reordering within a day, `useDraggable`/`useDroppable` for moving workouts between days. Mobile: long-press-to-reorder + "move to day" action menu (cross-column drag impractical on narrow screens).
-- [ ] Add/edit planned workout per day: workout type selector + distance/duration inputs
-- [ ] Workout types (V1 enum): Easy Run, Tempo Run, Interval/Speed, Long Run, Recovery Run, Race, Cross-Training, Rest Day
-- [ ] Plans are **per-user global** — one plan per athlete per week regardless of groups
+- [x] Week view component: custom 7-column CSS Grid (`grid-template-columns: repeat(7, 1fr)`) with day headers. **Not** a calendar library — simpler, lighter, full design control. Each column is a `@dnd-kit` droppable zone.
+- [x] Drag-and-drop with `@dnd-kit`: `useSortable` for reordering within a day, `useDraggable`/`useDroppable` for moving workouts between days. Mobile: long-press-to-reorder + "move to day" action menu (cross-column drag impractical on narrow screens).
+- [x] Add/edit planned workout per day: workout type selector + distance/duration inputs
+- [x] Workout types (V1 enum): Easy Run, Tempo Run, Interval/Speed, Long Run, Recovery Run, Race, Cross-Training, Rest Day
+- [x] Plans are **per-user global** — one plan per athlete per week regardless of groups
 - [ ] Coach plan assignment: coach selects athlete(s) from their group, assigns workouts
   - Coaches can only view/assign for athletes in their groups
   - Bulk assignment: assign same workout to multiple athletes at once
   - Athletes can freely edit coach-assigned plans (see brainstorm: collaborative model)
 - [ ] Plan conflict: last-write-wins. If coach assigns and athlete edits, athlete's edit stands. Notification sent to coach.
-- [ ] Past week browsing: navigate to previous weeks (read-only archive)
-- [ ] Plan vs actual overlay: show matched Strava activities alongside planned workouts
+- [x] Past week browsing: navigate to previous weeks (read-only archive)
+- [x] Plan vs actual overlay: show matched Strava activities alongside planned workouts
 - [ ] **Timezone handling**: plans use athlete's local timezone (from Strava profile or browser). Week boundaries computed in user's timezone.
 
 **2.2 Activity-Plan Matching Engine**
 
 **Matching pipeline** (runs on activity ingest via webhook, stores result persistently):
-- [ ] **Step 1 — Candidate set**: For each unmatched activity, find all unmatched planned workouts within +/- 1 calendar day (in athlete's timezone)
-- [ ] **Step 2 — Composite scoring**: Score each (activity, workout) pair using **geometric mean** of three signals (a zero in any dimension kills the match):
+- [x] **Step 1 — Candidate set**: For each unmatched activity, find all unmatched planned workouts within +/- 1 calendar day (in athlete's timezone)
+- [x] **Step 2 — Composite scoring**: Score each (activity, workout) pair using **geometric mean** of three signals (a zero in any dimension kills the match):
   - **Type score (weight 0.35)**: Map Strava `sport_type` to categories (`Run/TrailRun/VirtualRun` → running, `Ride/*Ride` → cycling, `Swim` → swimming, etc.). Running activities match any planned run type at 0.8. Cross-training types match `Cross-Training` plan at 0.7. Mismatched categories → 0.0.
   - **Distance score (weight 0.35)**: Asymmetric tolerance — going over is less penalized than going under (runners add warm-up/cooldown). Ratio 0.85-1.25 → 1.0, 0.70-0.85 → 0.7, 1.25-1.50 → 0.8, below 0.50 or above 2.0 → 0.1. Fall back to duration scoring if plan only specifies duration.
   - **Date score (weight 0.30)**: Same day → 1.0, off by 1 day → 0.6, off by 2 days → 0.2, beyond → 0.0
   - Formula: `score = typeScore^0.35 × distanceScore^0.35 × dateScore^0.30`
-- [ ] **Step 3 — Assignment**: Sort candidates by score descending, greedily assign (each activity and workout matched at most once). Unmatched activities shown as "Extra workout" in UI.
-- [ ] **Confidence thresholds**: ≥0.75 → auto-matched (green), 0.50-0.75 → likely match (confirm prompt), 0.25-0.50 → possible match (suggestion only), <0.25 → unmatched
-- [ ] Manual override: user can link any activity to any planned workout (or unlink)
-- [ ] Re-run matching when plans are edited or new activities arrive
+- [x] **Step 3 — Assignment**: Sort candidates by score descending, greedily assign (each activity and workout matched at most once). Unmatched activities shown as "Extra workout" in UI.
+- [x] **Confidence thresholds**: ≥0.75 → auto-matched (green), 0.50-0.75 → likely match (confirm prompt), 0.25-0.50 → possible match (suggestion only), <0.25 → unmatched
+- [x] Manual override: user can link any activity to any planned workout (or unlink)
+- [x] Re-run matching when plans are edited or new activities arrive
 - [ ] **Strava sport_type mapping table**: `Run/TrailRun/VirtualRun` → running, `Walk/Hike` → walking, `Ride/*Ride` → cycling, `Swim` → swimming, everything else → other_fitness
 - [ ] **Timezone-aware date resolution**: always convert activity `start_date` to user's local timezone (IANA) before extracting calendar date. Use activity's own timezone for traveling runners.
 
 **Plan vs actual comparison display:**
-- [ ] Per-matched-workout: show 2-3 delta metrics based on workout type:
+- [x] Per-matched-workout: show 2-3 delta metrics based on workout type:
   - Easy/Recovery run: distance delta + avg pace
   - Tempo: distance delta + pace delta (did they hit target pace?)
   - Long run: distance delta + duration delta
   - Interval: distance + total time
-- [ ] Weekly compliance bar: `Planned: 5 workouts / 52km | Actual: 4 workouts / 48km | 80% compliance`
-- [ ] Color coding: green (ratio 0.90-1.15), yellow (0.75-1.30), orange (outside), red (missed), blue (extra/unplanned)
+- [x] Weekly compliance bar: `Planned: 5 workouts / 52km | Actual: 4 workouts / 48km | 80% compliance`
+- [x] Color coding: green (ratio 0.90-1.15), yellow (0.75-1.30), orange (outside), red (missed), blue (extra/unplanned)
 
 **2.3 Activity Analysis Page**
-- [ ] Activity detail route: `/activity/:id`
-- [ ] Summary card: type, distance, duration, avg pace, date, elapsed time
-- [ ] Pace chart: **Recharts** `ComposedChart` — `Line` for pace per km/mile, `Area` for HR zone shading overlay (from velocity_smooth + heartrate streams)
-- [ ] Splits table: **TanStack Table** — per-km or per-mile splits with pace, elevation gain, HR. Sortable columns.
-- [ ] Heart rate zones: **Recharts** horizontal `BarChart` — zone distribution (Z1-Z5), avg HR, max HR
+- [x] Activity detail route: `/activity/:id`
+- [x] Summary card: type, distance, duration, avg pace, date, elapsed time
+- [x] Pace chart: **Recharts** `ComposedChart` — `Line` for pace per km/mile, `Area` for HR zone shading overlay (from velocity_smooth + heartrate streams)
+- [x] Splits table: **TanStack Table** — per-km or per-mile splits with pace, elevation gain, HR. Sortable columns.
+- [x] Heart rate zones: **Recharts** horizontal `BarChart` — zone distribution (Z1-Z5), avg HR, max HR
   - HR zones configurable per user (default: standard 5-zone model based on max HR)
   - Fetch user's HR zones from Strava `GET /athlete/zones` on signup
-- [ ] Elevation profile: **Recharts** `AreaChart` with `monotone` curve type (from altitude stream)
+- [x] Elevation profile: **Recharts** `AreaChart` with `monotone` curve type (from altitude stream)
 - [ ] Route map: **Mapbox GL JS** via `react-map-gl` — decode `summary_polyline` with `@mapbox/polyline` package, render as GeoJSON `LineString` via `<Source>` + `<Layer type="line">`. Use `mapbox://styles/mapbox/outdoors-v12` style. Lazy-load map component.
-- [ ] Plan vs actual comparison panel (if matched): show planned type/distance alongside actual
+- [x] Plan vs actual comparison panel (if matched): show planned type/distance alongside actual
 - [ ] **Responsive layout**: Desktop: 2-column (60% charts / 40% sticky map). Tablet: 50/50. Mobile: map on top (200px, expandable), charts stacked below.
-- [ ] Graceful degradation: hide HR section if no HR data, hide map if no GPS (manual entries), hide splits if no stream data
-- [ ] **Stream data storage**: JSONB column with column-oriented layout (`{time: [...], heartrate: [...], altitude: [...]}`) — PostgreSQL TOAST auto-compresses. Streams fetched on-demand when user opens activity detail (not during initial sync) to save rate limit budget.
+- [x] Graceful degradation: hide HR section if no HR data, hide map if no GPS (manual entries), hide splits if no stream data
+- [x] **Stream data storage**: JSONB column with column-oriented layout (`{time: [...], heartrate: [...], altitude: [...]}`) — PostgreSQL TOAST auto-compresses. Streams fetched on-demand when user opens activity detail (not during initial sync) to save rate limit budget.
 
 **2.4 User Settings**
-- [ ] Unit preference: metric (km) / imperial (miles) — default metric, conversion at display layer
-- [ ] Timezone: auto-detect from browser, allow manual override
-- [ ] Strava connection status: show connected account, option to re-authorize
+- [x] Unit preference: metric (km) / imperial (miles) — default metric, conversion at display layer
+- [x] Timezone: auto-detect from browser, allow manual override
+- [x] Strava connection status: show connected account, option to re-authorize
 - [ ] Account deletion: delete all PaceUp data, revoke Strava access
 
 #### Phase 3: Social + Groups

@@ -16,6 +16,15 @@ export function Navbar() {
             <a href="/dashboard" className="text-sm font-medium text-gray-600 hover:text-gray-900">
               Dashboard
             </a>
+            <a href="/planner" className="text-sm font-medium text-gray-600 hover:text-gray-900">
+              Planner
+            </a>
+            <a href="/activities" className="text-sm font-medium text-gray-600 hover:text-gray-900">
+              Activities
+            </a>
+            <a href="/settings" className="text-sm font-medium text-gray-600 hover:text-gray-900">
+              Settings
+            </a>
           </div>
         </div>
         <div className="flex items-center gap-3">
