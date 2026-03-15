@@ -58,10 +58,10 @@ function processActivityWorker() {
     },
     {
       connection: redisConnection,
-      concurrency: 3,
+      concurrency: 5,
       limiter: {
-        max: 10,
-        duration: 60_000, // max 10 jobs per minute
+        max: 20,
+        duration: 60_000, // max 20 jobs per minute (Strava allows ~300/15min)
       },
     }
   );

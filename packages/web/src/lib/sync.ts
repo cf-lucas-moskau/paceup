@@ -7,9 +7,12 @@ export interface SyncProgress {
   data: {
     userId: string;
     status: 'syncing';
-    completed: number;
-    total: number;
-    type: string;
+    activitiesCompleted: number;
+    totalEnqueued: number;
+    pagesCompleted: number;
+    listingDone?: boolean;
+    phase?: 'listing' | 'queuing';
+    page?: number;
   };
 }
 
@@ -17,8 +20,7 @@ export interface SyncComplete {
   type: 'sync-complete';
   data: {
     userId: string;
-    stravaActivityId?: number;
-    type?: string;
+    activitiesCompleted?: number;
   };
 }
 
@@ -44,9 +46,11 @@ export type SyncEvent = SyncProgress | SyncComplete | SyncError | AuthExpired | 
 
 export interface SyncStatus {
   status: 'idle' | 'syncing' | 'error';
-  completed?: number;
-  total?: number;
-  syncType?: string;
+  activitiesCompleted?: number;
+  totalEnqueued?: number;
+  pagesCompleted?: number;
+  listingDone?: boolean;
+  phase?: 'listing' | 'queuing' | 'fetching';
   error?: string;
 }
 
@@ -76,9 +80,7 @@ export const useSyncStore = create<SyncStore>((set) => ({
 // --- Reference-counted connection management ---
 
 let refCount = 0;
-let worker: SharedWorker | null = null;
 let eventSource: EventSource | null = null;
-let channel: BroadcastChannel | null = null;
 let rafId: number | null = null;
 let pendingMessages: SyncEvent[] = [];
 
@@ -86,14 +88,23 @@ function processMessage(event: SyncEvent): void {
   const store = useSyncStore.getState();
 
   switch (event.type) {
-    case 'sync-progress':
-      store.setStatus(event.data.userId, {
+    case 'sync-progress': {
+      const d = event.data;
+      const phase = d.listingDone
+        ? 'fetching'
+        : d.phase === 'listing'
+          ? 'listing'
+          : 'queuing';
+      store.setStatus(d.userId, {
         status: 'syncing',
-        completed: event.data.completed,
-        total: event.data.total,
-        syncType: event.data.type,
+        activitiesCompleted: d.activitiesCompleted,
+        totalEnqueued: d.totalEnqueued,
+        pagesCompleted: d.pagesCompleted,
+        listingDone: d.listingDone,
+        phase,
       });
       break;
+    }
     case 'sync-complete':
       store.setStatus(event.data.userId, { status: 'idle' });
       break;
@@ -105,7 +116,6 @@ function processMessage(event: SyncEvent): void {
       break;
     case 'auth-expired':
     case 'deauthorized':
-      // Session ended server-side — disconnect and redirect to login
       disconnectSync();
       window.location.href = '/?error=session_expired';
       break;
@@ -128,33 +138,11 @@ function handleMessage(event: SyncEvent): void {
   }
 }
 
-function handleChannelMessage(e: MessageEvent): void {
-  handleMessage(e.data as SyncEvent);
-}
-
 export function connectSync(): void {
   refCount++;
   if (refCount > 1) return; // Already connected
 
-  // Try SharedWorker first, fall back to direct EventSource
-  if (typeof SharedWorker !== 'undefined') {
-    try {
-      worker = new SharedWorker('/sync-worker.js');
-      channel = new BroadcastChannel('paceup-sync');
-      channel.onmessage = handleChannelMessage;
-      // Handle lastKnownStatus replay from SharedWorker
-      worker.port.onmessage = handleChannelMessage;
-      worker.port.start();
-      useSyncStore.getState().setConnected(true);
-      return;
-    } catch {
-      // SharedWorker failed, fall through to EventSource
-      worker = null;
-      channel = null;
-    }
-  }
-
-  // Fallback: direct EventSource (Safari/iOS)
+  // Direct EventSource connection
   eventSource = new EventSource('/api/sync/events', { withCredentials: true });
 
   const eventTypes = ['sync-progress', 'sync-complete', 'sync-error', 'auth-expired', 'deauthorized', 'init'];
@@ -176,18 +164,7 @@ export function connectSync(): void {
 
 export function disconnectSync(): void {
   refCount--;
-  if (refCount > 0) return; // Other components still connected
-
-  if (worker) {
-    worker.port.postMessage('disconnect');
-    worker = null;
-  }
-
-  if (channel) {
-    channel.onmessage = null;
-    channel.close();
-    channel = null;
-  }
+  if (refCount > 0) return;
 
   if (eventSource) {
     eventSource.close();
