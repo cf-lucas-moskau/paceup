@@ -9,9 +9,13 @@ function processSyncWorker() {
   const worker = new Worker<SyncListJobData>(
     'sync-list',
     async (job: Job<SyncListJobData>) => {
-      const { userId, afterTimestamp, page = 1 } = job.data;
+      const { userId, afterTimestamp, page = 1, maxActivities } = job.data;
 
-      console.log(`Sync list page ${page} for user ${userId}`);
+      // Cap perPage to remaining budget when maxActivities is set
+      const remaining = maxActivities ? maxActivities - (page - 1) * 200 : 200;
+      const perPage = Math.min(200, Math.max(1, remaining));
+
+      console.log(`Sync list page ${page} for user ${userId} (perPage=${perPage})`);
       await job.updateProgress({ userId, status: 'listing', page });
 
       const activities = await fetchAthleteActivities(
@@ -19,7 +23,7 @@ function processSyncWorker() {
         {
           after: afterTimestamp,
           page,
-          perPage: 200,
+          perPage,
         },
         'user'
       );
@@ -30,7 +34,7 @@ function processSyncWorker() {
           where: { id: userId },
           data: { lastSyncAt: new Date() },
         });
-        return { userId, total: 0 };
+        return { userId, total: 0, done: true };
       }
 
       // Batch-check which activities already exist
@@ -41,52 +45,57 @@ function processSyncWorker() {
       });
       const existingSet = new Set(existingActivities.map((a) => a.stravaActivityId.toString()));
 
-      // Enqueue detail-fetch jobs for new activities only
-      let enqueued = 0;
-      for (const activity of activities) {
-        if (!existingSet.has(activity.id.toString())) {
-          await activityQueue.add(
-            `fetch-${activity.id}`,
-            {
-              userId,
-              stravaActivityId: activity.id,
-              action: 'fetch' as const,
-              priority: 'user' as const,
-            },
-            {
-              jobId: `fetch-${activity.id}`,
-              priority: 2, // Medium priority for sync-triggered fetches
-            }
-          );
-          enqueued++;
-        }
+      // Enqueue detail-fetch jobs for new activities only (bulk add = 1 Redis round-trip)
+      const jobsToAdd = activities
+        .filter((a) => !existingSet.has(a.id.toString()))
+        .map((activity) => ({
+          name: `fetch-${activity.id}`,
+          data: {
+            userId,
+            stravaActivityId: activity.id,
+            action: 'fetch' as const,
+            priority: 'user' as const,
+          },
+          opts: {
+            jobId: `fetch-${activity.id}`,
+            priority: 2, // Medium priority for sync-triggered fetches
+          },
+        }));
+
+      if (jobsToAdd.length > 0) {
+        await activityQueue.addBulk(jobsToAdd);
       }
+      const enqueued = jobsToAdd.length;
 
       await job.updateProgress({ userId, status: 'queued', total: enqueued, page });
 
-      // If we got a full page (200), there might be more
-      if (activities.length === 200) {
+      // Check if we've hit the activity cap
+      const totalFetched = (page - 1) * 200 + activities.length;
+      const hitCap = maxActivities && totalFetched >= maxActivities;
+
+      // If we got a full page (200) and haven't hit the cap, there might be more
+      if (activities.length === 200 && !hitCap) {
         const { syncListQueue } = await import('./index.js');
         await syncListQueue.add(
           `sync-${userId}-page-${page + 1}`,
-          { userId, afterTimestamp, page: page + 1 },
-          { jobId: `sync-${userId}-page-${page + 1}` }
+          { userId, afterTimestamp, page: page + 1, maxActivities },
+          { jobId: `sync-${userId}-page-${page + 1}-${Date.now()}` }
         );
         console.log(`Sync list page ${page} done, continuing to page ${page + 1} (${enqueued} new activities)`);
       } else {
-        console.log(`Sync list complete for user ${userId}: ${enqueued} new activities from ${activities.length} total`);
+        const reason = hitCap ? `cap of ${maxActivities} reached` : `${activities.length} activities on last page`;
+        console.log(`Sync list complete for user ${userId}: ${enqueued} new activities (${reason})`);
       }
 
-      // Only update lastSyncAt on the final page — if page 2 fails,
-      // the next sync will re-fetch from the correct point
-      if (activities.length < 200) {
+      // Update lastSyncAt on the final page
+      if (activities.length < 200 || hitCap) {
         await prisma.user.update({
           where: { id: userId },
           data: { lastSyncAt: new Date() },
         });
       }
 
-      return { userId, total: enqueued };
+      return { userId, total: enqueued, done: activities.length < 200 || !!hitCap };
     },
     {
       connection: redisConnection,

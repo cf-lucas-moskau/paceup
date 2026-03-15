@@ -9,7 +9,7 @@ export const activityQueue = new Queue('activity-sync', {
       type: 'exponential',
       delay: 5000,
     },
-    removeOnComplete: { count: 1000 },
+    removeOnComplete: true,
     removeOnFail: { count: 5000 },
   },
 });
@@ -38,4 +38,5 @@ export interface SyncListJobData {
   userId: string;
   afterTimestamp?: number;
   page?: number;
+  maxActivities?: number;
 }

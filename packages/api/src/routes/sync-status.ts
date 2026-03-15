@@ -74,11 +74,15 @@ router.post('/trigger', async (req: Request, res: Response) => {
   // Enqueue a sync-list job
   const afterTimestamp = user.lastSyncAt
     ? Math.floor(user.lastSyncAt.getTime() / 1000)
-    : undefined; // no lastSyncAt = fetch everything
+    : undefined;
+
+  // First sync (no lastSyncAt): only fetch the 100 most recent activities
+  // Subsequent syncs: fetch all new activities since last sync (no cap needed)
+  const maxActivities = user.lastSyncAt ? undefined : 100;
 
   await syncListQueue.add(
     `sync-${userId}`,
-    { userId, afterTimestamp },
+    { userId, afterTimestamp, maxActivities },
     { jobId: `sync-${userId}-${Date.now()}` }
   );
 
